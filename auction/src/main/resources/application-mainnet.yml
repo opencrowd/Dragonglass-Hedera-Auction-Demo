@@ -1,0 +1,12 @@
+hedera.account:
+  key.path: config/account_keys_file-mainnet.txt
+  Alice: 0.0.29113
+  Bob: 0.0.29114
+  Carol: 0.0.29115
+  Dave: 0.0.29116
+  manager: 0.0.29090
+  beneficiary: 0.0.29090
+#hedera.contract.default: 0.0.29092
+#hedera.contract.bin.file: 0.0.29122
+#Enable below  Hedera Main-Net Node=3
+hedera.host: 35.237.200.180
