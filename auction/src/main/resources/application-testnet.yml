@@ -1,11 +1,19 @@
+hedera.network: testnet
 hedera.account:
-  key.path: config/account_keys_file-testnet.txt
-  Alice: 0.0.155271
-  Bob: 0.0.155274
-  Carol: 0.0.3
-  Dave: 0.0.2
-  manager: 0.0.155271
-  beneficiary: 0.0.155271
-hedera.contract.default: 0.0.156390
-hedera.contract.bin.file: 0.0.156384
-hedera.host: 0.testnet.hedera.com
+  Alice:
+    ID: 
+    KEY: 
+  Bob:
+    ID: 
+    KEY: 
+  Carol:
+    ID: 
+    KEY: 
+  manager:
+    ID: 
+    KEY: 
+    PUBLIC_KEY: 
+  beneficiary:
+    ID: 
+hedera.contract.bin.file: 
+hedera.contract.default: 

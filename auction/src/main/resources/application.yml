@@ -12,5 +12,3 @@ logging:
     org.springframework: ERROR
     guru.springframework.controllers: INFO
     com.opencrowd.dragonglass: INFO
-    org.apache.kafka: ERROR
-    com.datastax: ERROR

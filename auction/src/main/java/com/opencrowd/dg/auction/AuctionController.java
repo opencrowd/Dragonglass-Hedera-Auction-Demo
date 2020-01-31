@@ -27,25 +27,6 @@ import com.hedera.hashgraph.sdk.contract.ContractId;
 @Controller
 public class AuctionController {
 
-  @Value("${hedera.account.Alice:0.0.2}")
-  private String aliceAccount;
-
-  @Value("${hedera.account.Bob:0.0.2}")
-  private String bobAccount;
-
-  @Value("${hedera.account.Carol:0.0.2}")
-  private String carolAccount;
-
-  @Value("${hedera.account.Dave:0.0.2}")
-  private String daveAccount;
-
-  @Value("${hedera.account.manager:0.0.2}")
-  private String managerAccount;
-
-  @Value("${hedera.account.beneficiary:0.0.2}")
-  private String beneficiaryAccount;
-
-  @Value("${hedera.contract.default:}")
   private String DEFAULT_CONTRACT;
 
   private final AtomicLong counter = new AtomicLong();
@@ -60,32 +41,21 @@ public class AuctionController {
   private final static Logger LOGGER = Logger.getLogger(AuctionController.class);
 
   @Autowired
-//  public AuctionController(AuctionService auctionService) {
   public AuctionController(AuctionService auctionService,
-      @Value("${umbrella.property.file:umbrellaTest.properties}") String testConfigFilePath,
-      @Value("${hedera.host:localhost}") String hederaHost,
-      @Value("${hedera.account.Alice:0.0.2}") String aliceAccount,
-      @Value("${hedera.account.Bob:0.0.2}") String bobAccount,
-      @Value("${hedera.account.Carol:0.0.2}") String carolAccount,
-      @Value("${hedera.account.Dave:0.0.2}") String daveAccount,
-      @Value("${hedera.account.manager:0.0.2}") String managerAccount,
-      @Value("${hedera.account.beneficiary:0.0.2}") String beneficiaryAccount,
+      @Value("${hedera.account.Alice.ID}") String aliceAccount,
+      @Value("${hedera.account.Bob.ID}") String bobAccount,
+      @Value("${hedera.account.Carol.ID}") String carolAccount,
+      @Value("${hedera.account.manager.ID}") String managerAccount,
       @Value("${hedera.contract.default:}") String DEFAULT_CONTRACT
   ) throws Throwable {
     this.auctionService = auctionService;
-    this.aliceAccount = aliceAccount;
-    this.bobAccount = bobAccount;
-    this.carolAccount = carolAccount;
-    this.daveAccount = daveAccount;
-    this.managerAccount = managerAccount;
-    this.beneficiaryAccount = beneficiaryAccount;
     this.DEFAULT_CONTRACT = DEFAULT_CONTRACT;
 
     users = Map
-        .of("Alice", aliceAccount, "Bob", bobAccount, "Carol", carolAccount, "Dave", daveAccount);
+        .of("Alice", aliceAccount, "Bob", bobAccount, "Carol", carolAccount);
 
     accounts = Map
-        .of(aliceAccount, "Alice", bobAccount, "Bob", carolAccount, "Carol", daveAccount, "Dave");
+        .of(aliceAccount, "Alice", bobAccount, "Bob", carolAccount, "Carol");
   }
 
   public static String account2Str(AccountId account) {
@@ -96,9 +66,6 @@ public class AuctionController {
   @ResponseBody
   public Bid getBid(@RequestParam(name = "bidder", required = true) String bidder,
       @RequestParam(name = "id", required = true) long id) {
-//		long seqId = counter.getAndIncrement();
-//		Bid b1 = new Bid(seqId , Bidder.alice.name(), 100 + seqId, aliceAccount, DEFAULT_CONTRACT);
-//		history.put(getKey(bidder, seqId), b1);
     Bid bid = history.get(getKey(bidder, id));
     return bid;
   }
@@ -134,7 +101,7 @@ public class AuctionController {
     return response;
   }
 
-  private String bidAuction(String bidder,
+  public String bidAuction(String bidder,
       long amount,
       String contractAddr) throws Exception {
     String bidderAddr = users.get(bidder);
@@ -157,10 +124,6 @@ public class AuctionController {
   @ResponseBody
   public String newAuction(@PathVariable long biddingTimeSec, @PathVariable String beneficiaryAddr)
       throws Exception {
-    if (beneficiaryAddr == null) {
-      beneficiaryAddr = beneficiaryAccount;
-    }
-
     ContractId auctionContract = auctionService.createAuction(beneficiaryAddr, biddingTimeSec);
     DEFAULT_CONTRACT = "0.0." + auctionContract.contract;
     LOGGER.info("set DEFAULT_CONTRACT = " + DEFAULT_CONTRACT);
@@ -230,7 +193,7 @@ public class AuctionController {
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public String resetAuction(@PathVariable String contractId) throws Exception {
-    TransactionRecord record = auctionService.resetAuction(managerAccount, contractId);
+    TransactionRecord record = auctionService.resetAuction(contractId);
     LOGGER.info("reset contract = " + contractId);
     return record.toString();
   }
@@ -239,7 +202,7 @@ public class AuctionController {
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public String startTimer(@PathVariable String contractId) throws Exception {
-    TransactionRecord record = auctionService.startTimer(managerAccount, contractId);
+    TransactionRecord record = auctionService.startTimer(contractId);
     LOGGER.info("restarted timer for contract = " + contractId);
     return record.toString();
   }
