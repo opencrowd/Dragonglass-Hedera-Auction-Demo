@@ -18,6 +18,16 @@
 		<java.version>12</java.version>
 	</properties>
 
+	<build>
+		<plugins>
+			<!-- run $ mvn package, generating an executable jar -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+	
 	<dependencies>
 		<dependency>
 			<groupId>com.hedera.hashgraph</groupId>

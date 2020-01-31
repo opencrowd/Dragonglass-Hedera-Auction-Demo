@@ -15,5 +15,5 @@ hedera.account:
     PUBLIC_KEY: 
   beneficiary:
     ID: 
-hedera.contract.bin.file: 
-hedera.contract.default: 
+#hedera.contract.bin.file: 
+#hedera.contract.default: 
