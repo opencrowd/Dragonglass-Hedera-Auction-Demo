@@ -23,7 +23,10 @@ import com.hedera.hashgraph.sdk.TransactionRecord;
 import com.hedera.hashgraph.sdk.account.AccountId;
 import com.hedera.hashgraph.sdk.contract.ContractId;
 
-
+/**
+ * Provides REST API to auction contract deployed on Hedera networks.
+ * 
+ */
 @Controller
 public class AuctionController {
 
@@ -31,7 +34,6 @@ public class AuctionController {
 
   private final AtomicLong counter = new AtomicLong();
   private Map<String, Bid> history = new HashMap<>();
-
   private Map<String, String> users = null;
   private Map<String, String> accounts = null;
   private String[] userList = new String[]{"Bob", "Carol", "Alice"};
@@ -62,6 +64,10 @@ public class AuctionController {
     return "0.0." + account.account;
   }
 
+  /**
+   * Endpoint for getting a past bid info.
+   * 
+   */
   @GetMapping("/getBid")
   @ResponseBody
   public Bid getBid(@RequestParam(name = "bidder", required = true) String bidder,
@@ -74,6 +80,14 @@ public class AuctionController {
     return bidder + "_" + id;
   }
 
+  /**
+   * Endpoint for making a auction end contract call.
+   *  
+   * @param bidder the name of the calling user
+   * @param contractAddr the contract ID in the form of 0.0.x
+   * @return the call transaction record
+   * @throws Exception
+   */
   @PostMapping("/endAuction/{bidder}/{contractAddr}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
@@ -90,6 +104,15 @@ public class AuctionController {
     return record.toString();
   }
 
+  /**
+   * Endpoint for making a single bid contract call.
+   * 
+   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount the bidding amount in tiny bars
+   * @param contractAddr the contract ID in the form of 0.0.x
+   * @return the transaction record of the call
+   * @throws Exception
+   */
   @PostMapping("/singleBid/{bidder}/{amount}/{contractAddr}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
@@ -99,6 +122,15 @@ public class AuctionController {
     return response;
   }
 
+  /**
+   * Endpoint for making a single bid contract call and subsequently starting random bidding for demo purposes.
+   * 
+   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount the bidding amount in tiny bars
+   * @param contractAddr the contract ID in the form of 0.0.x
+   * @return the transaction record of the call
+   * @throws Exception
+   */
   @PostMapping("/bid/{bidder}/{amount}/{contractAddr}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
@@ -110,6 +142,16 @@ public class AuctionController {
     return response;
   }
 
+  /**
+   * 
+   * Make a single bid contract call.
+   * 
+   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount the bidding amount in tiny bars
+   * @param contractAddr the contract ID in the form of 0.0.x
+   * @return the transaction record of the call
+   * @throws Exception
+   */
   public String bidAuction(String bidder,
       long amount,
       String contractAddr) throws Exception {
@@ -128,29 +170,48 @@ public class AuctionController {
     return record.toString();
   }
 
+  /**
+   * Endpoint for creating a new auction contract instance.
+   * 
+   * @param biddingTimeSec the auction duration in seconds
+   * @param beneficiaryAddr the beneficiary account ID in the form of 0.0.x
+   * @return contract ID of the created instance
+   * @throws Exception
+   */
   @PostMapping("/newAuction/{biddingTimeSec}/{beneficiaryAddr}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public String newAuction(@PathVariable long biddingTimeSec, @PathVariable String beneficiaryAddr)
       throws Exception {
+  	history.clear();
     ContractId auctionContract = auctionService.createAuction(beneficiaryAddr, biddingTimeSec);
     DEFAULT_CONTRACT = "0.0." + auctionContract.contract;
     LOGGER.info("set DEFAULT_CONTRACT = " + DEFAULT_CONTRACT);
     return auctionContract.toString();
   }
 
+  /**
+   * Endpoint for getting the account ID and name of the bidders for the demo.
+   * 
+   * @return the account ID to bidder name map
+   */
   @GetMapping("/bidders")
   public ResponseEntity<Map<String, String>> getAllBidders() {
     return ResponseEntity.ok(accounts);
   }
 
+  /**
+   * Endpoint for starting random bidding by Alice, Bob, and Carol.
+   * @param contractId the contract ID in the form of 0.0.x
+   * @return status of success
+   * @throws Exception
+   */
   @PostMapping("/bid/{contractId}")
   public ResponseEntity<Map<String, String>> initiateRandomBidding(@PathVariable String contractId)
       throws Exception {
     final Context context = new Context(1000L);
     final Timer timer = new Timer();
     final TimerTask timerTask = new TimerTask() {
-//      private int counter = 0;
       private int index = 0;
 
       @Override
@@ -198,15 +259,30 @@ public class AuctionController {
     }
   }
 
+  /**
+   * Endpoint for resetting an existing auction instance by restoring the state to when the auction instance was first deployed.
+   * 
+   * @param contractId the contract ID in the form of 0.0.x
+   * @return transaction record of this reset contract call
+   * @throws Exception
+   */
   @PostMapping("/resetAuction/{contractId}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public String resetAuction(@PathVariable String contractId) throws Exception {
+  	history.clear();
     TransactionRecord record = auctionService.resetAuction(contractId);
     LOGGER.info("reset contract = " + contractId);
     return record.toString();
   }
 
+  /**
+   * Endpoint for starting an auction.
+   * 
+   * @param contractId the contract ID in the form of 0.0.x
+   * @return transaction record of this contract call
+   * @throws Exception
+   */
   @PostMapping("/startTimer/{contractId}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody

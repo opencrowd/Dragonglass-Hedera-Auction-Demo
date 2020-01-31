@@ -38,6 +38,10 @@ import com.hedera.hashgraph.sdk.file.FileId;
 import com.hedera.hashgraph.sdk.file.FileInfo;
 import com.hedera.hashgraph.sdk.file.FileInfoQuery;
 
+/**
+ * The service that powers the rest API endpoints.
+ * 
+ */
 @Service
 public class AuctionService {
   private String beneficiaryAccount;
@@ -101,6 +105,12 @@ public class AuctionService {
 		createAuctionContractFile();
 	}
 
+	/**
+	 * Adds a client.
+	 * 
+	 * @param accoutId the account ID used by the client for payment 
+	 * @param accountKey the correspoinding private key of the account
+	 */
 	private void addClient(AccountId accoutId, String accountKey) {
 		Client client = null;
 		if(hederaNetwork.equals("mainnet"))
@@ -114,16 +124,28 @@ public class AuctionService {
 		clients.put(accoutId, client);
 	}
 
+	/**
+	 * Gets the client by account ID.
+	 */
 	private Client getClient(AccountId accountId) {
 		return clients.get(accountId);
 	}
 	
+	/**
+	 * Convert account ID from string form to object.
+	 * 
+	 */
 	public static AccountId parseAccountID(String accountStr) {
 		String[] parts = accountStr.split("\\.");
 		AccountId id = new AccountId(Long.parseLong(parts[0]), Long.parseLong(parts[1]), Long.parseLong(parts[2]));
 		return id;
 	}
 
+	/**
+	 * Creates a file for the binary file of the auction contract on the Hedera network.
+	 *  
+	 * @throws Throwable
+	 */
 	public void createAuctionContractFile() throws Throwable {
 		if (DEFAULT_CONTRACT_FILE == null || DEFAULT_CONTRACT_FILE.isBlank())
 			uploadBinFile(managerAccountId);
@@ -131,6 +153,12 @@ public class AuctionService {
 			AUCTION_BIN_FILE_ID = parseFileID(DEFAULT_CONTRACT_FILE);
 	}
 
+	/**
+	 * Upload a binary file to Hedera network.
+	 *  
+	 * @param mangerAccount the account pays for the upload and owns the file
+	 * @throws Throwable
+	 */
 	public void uploadBinFile(AccountId mangerAccount) throws Throwable {
 		byte[] bytes = CommonUtils.readBinaryFileAsResource(AUCTION_FILE_NAME, getClass());
 		log.info("bin file = " + AUCTION_FILE_NAME + ", size in bytes = " + bytes.length);
@@ -141,6 +169,14 @@ public class AuctionService {
 		log.info(":) Auction bin file created successfully, file ID = " + newFileId);
 	}
 	
+	/**
+	 * Download the content of the given file from Hedera network.
+	 *  
+	 * @param fid file to get
+	 * @return the hex of the downloaded content
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public String getFileContentHex(FileId fid) throws HederaNetworkException, HederaStatusException {
     byte[] contents = getFileContent(fid);
 
@@ -150,6 +186,15 @@ public class AuctionService {
     return hex;
 	}
 
+	/**
+	 * Create a auction contract instance on Hedera network.
+	 * 
+	 * @param beneficiaryStr beneficiary account ID in the form of 0.0.x. The winner's bid amount will be transfered from the bidder's account to this account at the end of the auction.
+	 * @param biddingTime the duration of auction in seconds
+	 * @return the contract ID of the created instance
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public ContractId createAuction(String beneficiaryStr, long biddingTime) throws HederaNetworkException, HederaStatusException {
     if (beneficiaryStr == null || beneficiaryStr.isBlank()) {
     	beneficiaryStr = beneficiaryAccount;
@@ -175,25 +220,16 @@ public class AuctionService {
 		return newContractId;
 	}
 
-	public void autoBid(AccountId bidder, AccountId manager) throws Exception {
-		for (int i = 0; i < BIDDING_TIME_SEC; i += BID_INTERVAL_SEC) {
-			long bidAmount = (i + 1) * BID_INCREMENT;
-			bid(bidder, DEFAULT_AUCTION_CONTRACT_ID, bidAmount);
-			log.info("bid iteration " + (i + 1) + " completed successfully==>");
-		}
-
-		// wait to end auction
-		long elapse = System.currentTimeMillis() - start;
-		long bidmillis = BIDDING_TIME_SEC * 1000;
-		if (elapse <= bidmillis) {
-			long sleep = bidmillis - elapse + 1000;
-			log.info("sleep " + sleep + " millisec zzz ... ");
-			Thread.sleep(sleep);
-		}
-		TransactionRecord setRecord = endAuction(manager, DEFAULT_AUCTION_CONTRACT_ID);
-		log.info("end auction call completed successfully :), record = " + setRecord);
-	}
-
+	/**
+   * Make a single bid contract call.
+   * 
+   * @param bidder the account ID of the bidder
+   * @param contractId the contract ID in the form of 0.0.x
+   * @param bidAmount the bidding amount in tiny bars
+   * @return the transaction record of the call
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public TransactionRecord bid(AccountId bidder, ContractId contractId, long bidAmount) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(bidder);
     TransactionId transactionId = new ContractExecuteTransaction()
@@ -215,9 +251,13 @@ public class AuctionService {
     return record;
 	}
 
-	public static void main(String args[]) throws Throwable {
-	}
-
+	/**
+	 * Makes a bid contract call.
+	 * 
+	 * @param bid the Bid object used for the call
+   * @return the transaction record of the call
+	 * @throws Exception
+	 */
 	public TransactionRecord bid(Bid bid) throws Exception {
 		AccountId bidder = parseAccountID(bid.getBidderAddr());
 		TransactionRecord rv = bid(bidder, parseContractID(bid.getContractAddr()), bid.getAmount());
@@ -241,10 +281,10 @@ public class AuctionService {
 	}
 
 	/**
-	 * Parse contract string in the form of "0.0.1001".
+	 * Parse contract string in the form of "0.0.x".
 	 * 
-	 * @param contract String
-	 * @return
+	 * @param contractString contract in string form
+	 * @return converted contract ID
 	 */
 	public static ContractId parseContractID(String contractString) {
 		String[] parts = contractString.split("\\.");
@@ -253,30 +293,26 @@ public class AuctionService {
 		return contractId;
 	}
 
+	/**
+	 * Parse file string in the form of "0.0.x".
+	 * 
+	 * @param fileString the file ID in String form
+	 * @return converted contract ID
+	 */
 	public static FileId parseFileID(String fileString) {
 		String[] parts = fileString.split("\\.");
 		FileId id = new FileId(Long.parseLong(parts[0]), Long.parseLong(parts[1]), Long.parseLong(parts[2]));
 		return id;
 	}
 	
-	public void localCall(String functionName, AccountId payer) throws HederaNetworkException, HederaStatusException {
-		Client client = getClient(payer);
-    ContractFunctionResult contractCallResult = new ContractCallQuery()
-        .setGas(30000)
-        .setContractId(DEFAULT_AUCTION_CONTRACT_ID)
-        .setFunction(functionName)
-        .execute(client);
-
-    if (contractCallResult.errorMessage != null) {
-        log.warn("error calling contract: " + contractCallResult.errorMessage);
-        return;
-    }
-
-    String message = contractCallResult.getString(0);
-    log.info("contract message: " + message);
-		
-	}
-
+	/**
+	 * Signals the start of the auction.
+	 * 
+	 * @param contractId the contract instance to start
+	 * @return transaction record of the call
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public TransactionRecord startTimer(String contractId) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
@@ -297,6 +333,14 @@ public class AuctionService {
     return record;
 	}
 
+	/**
+	 * Reset the state of the auction.
+	 * 
+	 * @param contractId the contract instance to reset
+	 * @return transaction record of the call
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public TransactionRecord resetAuction(String contractId) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
@@ -317,6 +361,14 @@ public class AuctionService {
     return record;
 	}
 
+	/**
+	 * Make a contract call to end an auction.
+	 * 
+   * @param bidderAddr the account ID of the form 0.0.x of the calling user
+   * @param contractAddr the contract ID in the form of 0.0.x
+   * @return the call transaction record
+	 * @throws Exception
+	 */
 	public TransactionRecord endAuction(String bidderAddr, String contractAddr) throws Exception {
 		AccountId managerId = parseAccountID(bidderAddr);
 		ContractId contractId = parseContractID(contractAddr);
@@ -325,6 +377,14 @@ public class AuctionService {
 	}
 
 	
+	/**
+	 * Make a contract call to end an auction.
+	 * 
+   * @param managerId the account ID of the calling user
+   * @param contractId the contract ID
+   * @return the call transaction record
+	 * @throws Exception
+	 */
 	public TransactionRecord endAuction(AccountId managerId, ContractId contractId) throws Exception {
 		Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
@@ -345,6 +405,13 @@ public class AuctionService {
     return record;
 	}
 
+	/**
+	 * Get the encoded constructor parameters.
+	 * 
+	 * @param biddingTime auction duration
+	 * @param beneficiary the solidity address of the beneficiary account
+	 * @return the encoded constructor parameters
+	 */
 	public static byte[] getEncodedConstructor(long biddingTime, byte[] beneficiary) {
     String funcJson = AUCTION_CONSTRUCTOR_ABI.replaceAll("'", "\"");
     CallTransaction.Function func = CallTransaction.Function.fromJsonInterface(funcJson);
@@ -353,6 +420,12 @@ public class AuctionService {
     return encodedFunc;
   }
 
+	/**
+	 * Convert an Hedera account ID to solidity address.
+	 * 
+	 * @param accountStr Hedera account ID in string form
+	 * @return converted solidity address
+	 */
 	public byte[] convert2SolidityAddress(String accountStr) {
   	AccountId crAccount = parseAccountID(accountStr);
     byte[] solidityByteArray = new byte[20];
@@ -366,6 +439,13 @@ public class AuctionService {
     return solidityByteArray;
   }
 
+	/**
+	 * Copy array data.
+	 * 
+	 * @param startInToArray start position
+	 * @param toArray destination array
+	 * @param fromArray source array
+	 */
   public static void copyArray(int startInToArray, byte[] toArray, byte[] fromArray) {
     if (fromArray == null || toArray == null) {
       return;
@@ -375,6 +455,13 @@ public class AuctionService {
     }
   }
 
+  /**
+   * Uploads a large file to Hedera network, which may require splitting the file and make multiple file append calls.
+   * 
+   * @param bytes file content
+   * @return the file ID of the uploaded file
+   * @throws Throwable
+   */
   public FileId uploadLargeFile(byte[] bytes) throws Throwable {
     int numParts = bytes.length / FILE_PART_SIZE;
     int remainder = bytes.length % FILE_PART_SIZE;
@@ -415,6 +502,14 @@ public class AuctionService {
     return fid;
   }
 
+  /**
+   * Get the file content from Hedera network.
+   * 
+   * @param fid file to get
+   * @return the content bytes
+   * @throws HederaNetworkException
+   * @throws HederaStatusException
+   */
 	public byte[] getFileContent(FileId fid) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
     byte[] contents = new FileContentsQuery()
@@ -423,6 +518,14 @@ public class AuctionService {
 		return contents;
 	}
 
+	/**
+	 * Get file info from Hedera network.
+	 * 
+	 * @param fid file to get
+	 * @return FileInfo object
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public FileInfo getFileInfo(FileId fid) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
     FileInfo contents = new FileInfoQuery()
@@ -431,11 +534,19 @@ public class AuctionService {
 		return contents;
 	}
 
-	public void appendFile(FileId fid, byte[] partBytes) throws HederaNetworkException, HederaStatusException {
+	/**
+	 * Appends data to an existing file in the Hedera network.
+	 * 
+	 * @param fid file to append
+	 * @param bytes data to append
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
+	public void appendFile(FileId fid, byte[] bytes) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
 		TransactionId fileTxId = new FileAppendTransaction()
 				.setFileId(fid)
-		    .setContents(partBytes)
+		    .setContents(bytes)
 		    .setMaxTransactionFee(200000000l)
 		    .execute(client);
 
@@ -445,6 +556,14 @@ public class AuctionService {
 		Assert.assertEquals(Status.Success, status);
 	}
 
+	/**
+	 * Create a new file on the Hedera network.
+	 * 
+	 * @param bytes the content of the file
+	 * @return created file ID
+	 * @throws HederaNetworkException
+	 * @throws HederaStatusException
+	 */
 	public FileId createFile(byte[] bytes) throws HederaNetworkException, HederaStatusException {
 		Client client = getClient(managerAccountId);
 		TransactionId fileTxId = new FileCreateTransaction()

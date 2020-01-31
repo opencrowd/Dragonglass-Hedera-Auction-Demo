@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2020 OpenCrowd, Inc.  [http://www.opencrowd.com]
- */
 package com.opencrowd.dg.auction;
 
 import java.io.ByteArrayInputStream;
@@ -35,7 +32,6 @@ import com.hedera.hashgraph.proto.TransactionBody;
 /**
  * Common utilities.
  *
- * @author hua
  */
 public class CommonUtils {
 
