@@ -90,6 +90,15 @@ public class AuctionController {
     return record.toString();
   }
 
+  @PostMapping("/singleBid/{bidder}/{amount}/{contractAddr}")
+  @ResponseStatus(HttpStatus.CREATED)
+  @ResponseBody
+  public String singleBid(@PathVariable String bidder, @PathVariable long amount,
+      @PathVariable String contractAddr) throws Exception {
+    String response = bidAuction(bidder, amount, contractAddr);
+    return response;
+  }
+
   @PostMapping("/bid/{bidder}/{amount}/{contractAddr}")
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
