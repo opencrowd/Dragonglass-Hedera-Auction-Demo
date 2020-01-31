@@ -31,8 +31,8 @@ public class AuctionApplication {
 
 	private ApiInfo metadata() {
 		return new ApiInfoBuilder()
-				.title("Dragon Glass Public API")
-				.description("Public API to access dragonglass data")
+				.title("Dragonglass Auction Demo Rest API")
+				.description("Rest API to access auction contract")
 				.version("1.0")
 				.build();
 	}
