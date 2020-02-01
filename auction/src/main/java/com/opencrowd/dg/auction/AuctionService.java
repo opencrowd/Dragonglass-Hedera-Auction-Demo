@@ -1,5 +1,22 @@
 package com.opencrowd.dg.auction;
 
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.tomcat.util.buf.HexUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.hedera.hashgraph.proto.TransactionBody;
 import com.hedera.hashgraph.sdk.Client;
 import com.hedera.hashgraph.sdk.HederaConstants;
 import com.hedera.hashgraph.sdk.HederaNetworkException;
@@ -11,6 +28,7 @@ import com.hedera.hashgraph.sdk.TransactionRecord;
 import com.hedera.hashgraph.sdk.account.AccountId;
 import com.hedera.hashgraph.sdk.contract.ContractCreateTransaction;
 import com.hedera.hashgraph.sdk.contract.ContractExecuteTransaction;
+import com.hedera.hashgraph.sdk.contract.ContractFunctionParams;
 import com.hedera.hashgraph.sdk.contract.ContractFunctionResult;
 import com.hedera.hashgraph.sdk.contract.ContractId;
 import com.hedera.hashgraph.sdk.crypto.PublicKey;
@@ -21,19 +39,6 @@ import com.hedera.hashgraph.sdk.file.FileCreateTransaction;
 import com.hedera.hashgraph.sdk.file.FileId;
 import com.hedera.hashgraph.sdk.file.FileInfo;
 import com.hedera.hashgraph.sdk.file.FileInfoQuery;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import org.apache.commons.codec.binary.Hex;
-import org.ethereum.core.CallTransaction;
-import org.ethereum.util.ByteUtil;
-import org.junit.Assert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 /**
  * The service that powers the rest API endpoints.
@@ -43,7 +48,6 @@ public class AuctionService {
 
   private String beneficiaryAccount;
   private PublicKey managerPublicKey;
-  private String DEFAULT_CONTRACT_FILE;
   private String hederaNetwork;
 
   private AccountId aliceAccountId;
@@ -51,22 +55,18 @@ public class AuctionService {
   private AccountId carolAccountId;
   private AccountId managerAccountId;
 
-  private long start = System.currentTimeMillis();
-  private int BID_INTERVAL_SEC = 2;
-  private int BID_INCREMENT = 10;
-
-  private long defaultContract;
-  private FileId AUCTION_BIN_FILE_ID;
-  private long BIDDING_TIME_SEC = 30;
-  private ContractId DEFAULT_AUCTION_CONTRACT_ID = new ContractId(0, 0, defaultContract);
   private String AUCTION_FILE_NAME = "auctionTimer_sol_SimpleAuction.bin";
+  private String DEFAULT_CONTRACT_FILE;
+  private FileId AUCTION_BIN_FILE_ID;
+  private ContractId DEFAULT_AUCTION_CONTRACT_ID;
 
   private final static Logger log = LoggerFactory.getLogger(AuctionService.class);
 
-  private static final String AUCTION_CONSTRUCTOR_ABI =
-      "{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_biddingTime\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_beneficiary\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}";
+//  private static final String AUCTION_CONSTRUCTOR_ABI =
+//      "{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_biddingTime\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_beneficiary\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}";
   private static int FILE_PART_SIZE = 4096; //4K bytes
   private Map<AccountId, Client> clients = new HashMap<>();
+	private long CONTRACT_CALL_GAS = 60000;
 
   @Autowired
   public AuctionService(
@@ -81,12 +81,14 @@ public class AuctionService {
       @Value("${hedera.account.manager.KEY}") String managerKey,
       @Value("${hedera.account.manager.PUBLIC_KEY}") String managerPublicKey,
       @Value("${hedera.account.beneficiary.ID}") String beneficiaryAccount,
-      @Value("${hedera.contract.bin.file:}") String DEFAULT_CONTRACT_FILE,
-      @Value("${hedera.contract.default:}") String DEFAULT_CONTRACT) throws Throwable {
+      @Value("${hedera.contract.bin.file:}") String defaultContractFile,
+      @Value("${hedera.contract.default:}") String defaultContract) throws Throwable {
 
     this.hederaNetwork = hederaNetwork;
     this.managerPublicKey = PublicKey.fromString(managerPublicKey);
-    this.DEFAULT_CONTRACT_FILE = DEFAULT_CONTRACT_FILE;
+    this.DEFAULT_CONTRACT_FILE = defaultContractFile;
+    if(defaultContract != null && !defaultContract.isBlank())
+    	this.DEFAULT_AUCTION_CONTRACT_ID = parseContractID(defaultContract);
     aliceAccountId = parseAccountID(aliceAccount);
     bobAccountId = parseAccountID(bobAccount);
     carolAccountId = parseAccountID(carolAccount);
@@ -180,7 +182,7 @@ public class AuctionService {
   public String getFileContentHex(FileId fid) throws HederaNetworkException, HederaStatusException {
     byte[] contents = getFileContent(fid);
 
-    String hex = Hex.encodeHexString(contents);
+    String hex = HexUtils.toHexString(contents);
 
     log.info("File content size = " + contents.length + ", hex=" + hex);
     return hex;
@@ -203,13 +205,14 @@ public class AuctionService {
       beneficiaryStr = beneficiaryAccount;
     }
     Client client = getClient(managerAccountId);
-    byte[] beneficiary = convert2SolidityAddress(beneficiaryStr);
-    byte[] constructorParams = getEncodedConstructor(biddingTime, beneficiary);
+  	byte[] data = createConstructorParams(biddingTime, beneficiaryStr);
+  	log.info("constructorParams = " + HexUtils.toHexString(data));
+    
     TransactionId contractTxId = new ContractCreateTransaction()
         .setAutoRenewPeriod(HederaConstants.DEFAULT_AUTORENEW_DURATION).setGas(217000)
         .setBytecodeFileId(AUCTION_BIN_FILE_ID)
         .setContractMemo("OpenCrowd Dragonglass Auction Demo Contract")
-        .setConstructorParams(constructorParams)
+        .setConstructorParams(data)
         // set an admin key so we can delete the contract later
         .setAdminKey(managerPublicKey)
         .setMaxTransactionFee(1500000000l)
@@ -218,13 +221,56 @@ public class AuctionService {
     TransactionReceipt contractReceipt = contractTxId.getReceipt(client);
     log.info(contractReceipt.toProto().toString());
     ContractId newContractId = contractReceipt.getContractId();
-    Assert.assertNotNull(newContractId);
-    DEFAULT_AUCTION_CONTRACT_ID = newContractId;
-    log.info(":) Auction contract created successfully, contract ID = " + newContractId);
+    if(newContractId != null) {
+	    DEFAULT_AUCTION_CONTRACT_ID = newContractId;
+	    log.info(":) Auction contract created successfully, contract ID = " + newContractId);
+    } else {
+	    log.info("(: Auction contract failed to create!");
+    }
     return newContractId;
   }
 
+  public static void main(String[] args) throws InvalidProtocolBufferException {
+  	long biddingTime = 360;
+
+  	byte[] data = createConstructorParams(biddingTime, "0.0.155271");
+//    args.add(new Argument("address", ByteString.copyFrom(addressBytes).concat(padding.substring(19)), false));
+
+    ContractCreateTransaction contractTx = new ContractCreateTransaction()
+//        .setConstructorParams(new ContractFunctionParams().addUint64(biddingTime).addAddress(HexUtils.toHexString(beneficiary)))
+        .setConstructorParams(data)
+        .setTransactionId(new TransactionId(new AccountId(155271)))
+        .setNodeAccountId(new AccountId(3))
+        .setBytecodeFileId(new FileId(0, 0, 12334));
+    TransactionBody body = TransactionBody.parseFrom(contractTx.toProto().getBodyBytes()); 
+    String hex = HexUtils.toHexString(body.getContractCreateInstance().getConstructorParameters().toByteArray());
+		log.info("param hex = " + hex);
+	}
+  
   /**
+   * Create the auction constructor param bytes.
+   * 
+   * @param biddingTime bidding time in seconds
+   * @param beneficiaryAccountStr beneficiary account string in the form of 0.0.x
+   * @return the constructor param data
+   */
+  private static byte[] createConstructorParams(long biddingTime, String beneficiaryAccountStr) {
+		byte[] beneficiary = convert2SolidityAddress(beneficiaryAccountStr);
+		
+    ByteString data = null;
+	
+    ByteString bidTime = ByteString.copyFrom(CommonUtils.longToBytes(biddingTime));
+    ByteString paddingLong = ByteString.copyFrom(new byte[32 - bidTime.size()]);
+
+    ByteString paddingAddress = ByteString.copyFrom(new byte[32 - beneficiary.length]);
+    ByteString bene = ByteString.copyFrom(beneficiary);
+    
+    data = paddingLong.concat(bidTime).concat(paddingAddress).concat(bene);
+    
+		return data.toByteArray();
+	}
+
+	/**
    * Make a single bid contract call.
    *
    * @param bidder     the account ID of the bidder
@@ -238,7 +284,7 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(bidder);
     TransactionId transactionId = new ContractExecuteTransaction()
-        .setGas(30000)
+        .setGas(CONTRACT_CALL_GAS)
         .setContractId(contractId)
         .setFunction("bid")
         .setPayableAmount(bidAmount)
@@ -323,7 +369,7 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
-        .setGas(30000)
+        .setGas(CONTRACT_CALL_GAS)
         .setContractId(parseContractID(contractId))
         .setFunction("startTimer")
         .execute(client);
@@ -352,7 +398,7 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
-        .setGas(30000)
+        .setGas(CONTRACT_CALL_GAS)
         .setContractId(parseContractID(contractId))
         .setFunction("auctionReset")
         .execute(client);
@@ -396,7 +442,7 @@ public class AuctionService {
   public TransactionRecord endAuction(AccountId managerId, ContractId contractId) throws Exception {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
-        .setGas(30000)
+        .setGas(CONTRACT_CALL_GAS )
         .setContractId(contractId)
         .setFunction("auctionEnd")
         .execute(client);
@@ -414,34 +460,19 @@ public class AuctionService {
   }
 
   /**
-   * Get the encoded constructor parameters.
-   *
-   * @param biddingTime auction duration
-   * @param beneficiary the solidity address of the beneficiary account
-   * @return the encoded constructor parameters
-   */
-  public static byte[] getEncodedConstructor(long biddingTime, byte[] beneficiary) {
-    String funcJson = AUCTION_CONSTRUCTOR_ABI.replaceAll("'", "\"");
-    CallTransaction.Function func = CallTransaction.Function.fromJsonInterface(funcJson);
-    byte[] encodedFunc = func.encodeArguments(biddingTime, beneficiary);
-
-    return encodedFunc;
-  }
-
-  /**
    * Convert an Hedera account ID to solidity address.
    *
    * @param accountStr Hedera account ID in string form
    * @return converted solidity address
    */
-  public byte[] convert2SolidityAddress(String accountStr) {
+  public static byte[] convert2SolidityAddress(String accountStr) {
     AccountId crAccount = parseAccountID(accountStr);
     byte[] solidityByteArray = new byte[20];
-    byte[] indicatorBytes = ByteUtil.intToBytes(0);
+    byte[] indicatorBytes = CommonUtils.intToBytes(0);
     copyArray(0, solidityByteArray, indicatorBytes);
-    byte[] realmNumBytes = ByteUtil.longToBytes(crAccount.realm);
+    byte[] realmNumBytes = CommonUtils.longToBytes(crAccount.realm);
     copyArray(4, solidityByteArray, realmNumBytes);
-    byte[] accountNumBytes = ByteUtil.longToBytes(crAccount.account);
+    byte[] accountNumBytes = CommonUtils.longToBytes(crAccount.account);
     copyArray(12, solidityByteArray, accountNumBytes);
 
     return solidityByteArray;
@@ -507,7 +538,7 @@ public class AuctionService {
     log.info("file info: file size = " + fi.size + ", acl = " + fi.keys);
 
     byte[] content = getFileContent(fid);
-    Assert.assertArrayEquals(bytes, content);
+    Assert.isTrue(Arrays.equals(bytes, content), "uploaded content does not match what's on the network!");
     return fid;
   }
 
@@ -563,7 +594,7 @@ public class AuctionService {
     TransactionReceipt fileReceipt = fileTxId.getReceipt(client);
     Status status = fileReceipt.status;
     log.info("append file receipt: " + fileReceipt);
-    Assert.assertEquals(Status.Success, status);
+    Assert.isTrue(Status.Success == status, "file append failed!");
   }
 
   /**
@@ -586,10 +617,10 @@ public class AuctionService {
     TransactionReceipt fileReceipt = fileTxId.getReceipt(client);
     FileId newFileId = fileReceipt.getFileId();
     log.info("contract bytecode file: " + newFileId);
-    Assert.assertNotNull(newFileId);
+    Assert.notNull(newFileId, "created file ID is null!");
 
     byte[] downloadBytes = getFileContent(newFileId);
-    Assert.assertArrayEquals(bytes, downloadBytes);
+    Assert.isTrue(Arrays.equals(bytes, downloadBytes), "created file content does not match the source content!");
     return newFileId;
   }
 

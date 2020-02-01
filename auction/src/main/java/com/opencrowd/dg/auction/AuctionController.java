@@ -1,16 +1,12 @@
 package com.opencrowd.dg.auction;
 
-import com.hedera.hashgraph.sdk.TransactionRecord;
-import com.hedera.hashgraph.sdk.account.AccountId;
-import com.hedera.hashgraph.sdk.contract.ContractFunctionResult;
-import com.hedera.hashgraph.sdk.contract.ContractId;
-import com.hedera.hashgraph.sdk.contract.ContractLogInfo;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +20,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+
+import com.hedera.hashgraph.sdk.TransactionRecord;
+import com.hedera.hashgraph.sdk.account.AccountId;
+import com.hedera.hashgraph.sdk.contract.ContractFunctionResult;
+import com.hedera.hashgraph.sdk.contract.ContractId;
+import com.hedera.hashgraph.sdk.contract.ContractLogInfo;
 
 /**
  * Provides REST API to auction contract deployed on Hedera networks.
@@ -303,135 +305,46 @@ public class AuctionController {
 
   /**
    * Convert transaction record to string
-   *
    * @param record transaction record to be converted
    * @return converted string
    */
-  private String toString(TransactionRecord record) {
-    StringBuffer sb = new StringBuffer();
-    String ln = "\n";
-    sb
-        .append("receipt status: " + record.receipt.status.name()).append(ln)
-        .append("consensusTimestamp: " + record.consensusTimestamp).append(ln)
-        .append("transactionID: " + record.transactionId).append(ln)
-        .append("transactionFee: " + record.transactionFee).append(ln);
+	private String toString(TransactionRecord record) {
+		StringBuffer sb = new StringBuffer();
+		String ln = "\n";
+		sb
+		.append("receipt status: " + record.receipt.status.name()).append(ln)
+		.append("consensusTimestamp: " + record.consensusTimestamp).append(ln)
+		.append("transactionID: " + record.transactionId).append(ln)
+		.append("transactionFee: " + record.transactionFee).append(ln);
+		
+		ContractFunctionResult execResult = record.getContractExecuteResult();
+		if(execResult != null) {
+			sb.append("contractCallResult {\n\tgasUsed: " + execResult.gasUsed).append(ln);
+			if(execResult.contractId.contract != 0)
+				sb.append("\tcontractId: " + execResult.contractId).append(ln);
+			if(execResult.errorMessage != null) {
+				sb.append("\terrorMessage: " + execResult.errorMessage).append(ln);
+				sb.append("\tcontractCallResult: " + CommonUtils.escapeBytes(execResult.asBytes())).append(ln);
+			}
 
-    ContractFunctionResult execResult = record.getContractExecuteResult();
-    if (execResult != null) {
-      sb.append("contractCallResult {\n\tgasUsed: " + execResult.gasUsed).append(ln);
-      if (execResult.contractId.contract != 0) {
-        sb.append("\tcontractId: " + execResult.contractId).append(ln);
-      }
-      if (execResult.errorMessage != null) {
-        sb.append("\terrorMessage: " + execResult.errorMessage).append(ln);
-        sb.append("\tcontractCallResult: " + escapeBytes(execResult.asBytes())).append(ln);
-      }
+			List<ContractLogInfo> logs = execResult.logs;
+			if(logs != null) {
+				for(ContractLogInfo log : logs) {
+					sb.append("\tlogInfo {\n");
+					sb.append("\t\tcontractId: " + log.contractId).append(ln);
+					sb.append("\t\tbloom: " + CommonUtils.escapeBytes(log.bloom)).append(ln);
+					for(byte[] topic : log.topics) {
+						sb.append("\t\ttopic: " + CommonUtils.escapeBytes(topic)).append(ln);
+					}
+					sb.append("\t\tdata: " + CommonUtils.escapeBytes(log.data)).append(ln);
+					sb.append("\t}\n");
+				}
+			}
+			sb.append("}\n");
+		}
+			
+		String rv = sb.toString();
+		return rv;
+	}
 
-      List<ContractLogInfo> logs = execResult.logs;
-      if (logs != null) {
-        for (ContractLogInfo log : logs) {
-          sb.append("\tlogInfo {\n");
-          sb.append("\t\tcontractId" + log.contractId).append(ln);
-          sb.append("\t\tbloom" + escapeBytes(log.bloom)).append(ln);
-          sb.append("\t\tdata" + escapeBytes(log.data)).append(ln);
-          sb.append("\t\ttopic" + escapeBytes(log.topics.get(0))).append(ln);
-          sb.append("\t}\n");
-        }
-      }
-      sb.append("}\n");
-    }
-
-//		sb.append("transferList: " + record.transfers).append(ln);
-
-    String rv = sb.toString();
-    return rv;
-  }
-
-  /**
-   * Escape bytes for printing purpose.
-   *
-   * @param input bytes to escape
-   * @return escaped string
-   */
-  public static String escapeBytes(final byte[] input) {
-    return escapeBytes(
-        new ByteSequence() {
-          @Override
-          public int size() {
-            return input.length;
-          }
-
-          @Override
-          public byte byteAt(int offset) {
-            return input[offset];
-          }
-        });
-  }
-
-  private interface ByteSequence {
-
-    int size();
-
-    byte byteAt(int offset);
-  }
-
-  /**
-   * Escapes bytes in the format used in protocol buffer text format, which is the same as the
-   * format used for C string literals. All bytes that are not printable 7-bit ASCII characters are
-   * escaped, as well as backslash, single-quote, and double-quote characters. Characters for which
-   * no defined short-hand escape sequence is defined will be escaped using 3-digit octal
-   * sequences.
-   */
-  static String escapeBytes(final ByteSequence input) {
-    final StringBuilder builder = new StringBuilder(input.size());
-    for (int i = 0; i < input.size(); i++) {
-      final byte b = input.byteAt(i);
-      switch (b) {
-        // Java does not recognize \a or \v, apparently.
-        case 0x07:
-          builder.append("\\a");
-          break;
-        case '\b':
-          builder.append("\\b");
-          break;
-        case '\f':
-          builder.append("\\f");
-          break;
-        case '\n':
-          builder.append("\\n");
-          break;
-        case '\r':
-          builder.append("\\r");
-          break;
-        case '\t':
-          builder.append("\\t");
-          break;
-        case 0x0b:
-          builder.append("\\v");
-          break;
-        case '\\':
-          builder.append("\\\\");
-          break;
-        case '\'':
-          builder.append("\\\'");
-          break;
-        case '"':
-          builder.append("\\\"");
-          break;
-        default:
-          // Only ASCII characters between 0x20 (space) and 0x7e (tilde) are
-          // printable.  Other byte values must be escaped.
-          if (b >= 0x20 && b <= 0x7e) {
-            builder.append((char) b);
-          } else {
-            builder.append('\\');
-            builder.append((char) ('0' + ((b >>> 6) & 3)));
-            builder.append((char) ('0' + ((b >>> 3) & 7)));
-            builder.append((char) ('0' + (b & 7)));
-          }
-          break;
-      }
-    }
-    return builder.toString();
-  }
 }
