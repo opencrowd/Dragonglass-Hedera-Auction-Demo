@@ -310,7 +310,7 @@ public class CommonUtils {
   public static byte[] hexToBytes(String data) {
     byte[] rv = new byte[0];
     try {
-      rv = Hex.decodeHex(data);
+      rv = Hex.decodeHex(data.toCharArray());
     } catch (DecoderException e) {
       e.printStackTrace();
     }
