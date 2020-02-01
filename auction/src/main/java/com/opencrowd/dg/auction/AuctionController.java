@@ -330,18 +330,18 @@ public class AuctionController {
 			if(logs != null) {
 				for(ContractLogInfo log : logs) {
 					sb.append("\tlogInfo {\n");
-					sb.append("\t\tcontractId" + log.contractId).append(ln);
-					sb.append("\t\tbloom" + escapeBytes(log.bloom)).append(ln);
-					sb.append("\t\tdata" + escapeBytes(log.data)).append(ln);
-					sb.append("\t\ttopic" + escapeBytes(log.topics.get(0))).append(ln);
+					sb.append("\t\tcontractId: " + log.contractId).append(ln);
+					sb.append("\t\tbloom: " + escapeBytes(log.bloom)).append(ln);
+					for(byte[] topic : log.topics) {
+						sb.append("\t\ttopic: " + escapeBytes(topic)).append(ln);
+					}
+					sb.append("\t\tdata: " + escapeBytes(log.data)).append(ln);
 					sb.append("\t}\n");
 				}
 			}
 			sb.append("}\n");
 		}
 			
-//		sb.append("transferList: " + record.transfers).append(ln);
-		
 		String rv = sb.toString();
 		return rv;
 	}
