@@ -24,9 +24,8 @@ const MainContainer = (props) => {
     useEffect(() => { allEvents = allEvents.concat(props.transactions) }, [props.transactions]);
     useEffect(() => { props.users.length > 0 && setUserMap(props.users[0]) }, [props.users]);
 
-    //const apiKey = 'ad63b9a4-d0e7-30b9-8622-69bcdd9166ae';  // This is a testnet apiKey
     const dispatch = useDispatch();
-    const apiKey = '15ca76c8-db77-3a5e-8d70-7fbf9f5c2421';     // This is a mainnet apiKey
+    const apiKey = <your-api-key>;
 
    const handleTxnUpdate = (txn) => {
         allEvents.unshift(txn);
