@@ -7,7 +7,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -28,7 +29,6 @@ import com.hedera.hashgraph.sdk.contract.ContractLogInfo;
 
 /**
  * Provides REST API to auction contract deployed on Hedera networks.
- * 
  */
 @Controller
 public class AuctionController {
@@ -43,7 +43,7 @@ public class AuctionController {
 
   private AuctionService auctionService;
 
-  private final static Logger LOGGER = Logger.getLogger(AuctionController.class);
+  private final static Logger LOGGER = LoggerFactory.getLogger(AuctionController.class);
 
   @Autowired
   public AuctionController(AuctionService auctionService,
@@ -69,7 +69,6 @@ public class AuctionController {
 
   /**
    * Endpoint for getting a past bid info.
-   * 
    */
   @GetMapping("/getBid")
   @ResponseBody
@@ -81,9 +80,9 @@ public class AuctionController {
 
   /**
    * Generate a key for bid history.
-   * 
+   *
    * @param bidder the name of the bidder
-   * @param id the id of the bid
+   * @param id     the id of the bid
    * @return generated key
    */
   private String getKey(String bidder, long id) {
@@ -92,8 +91,8 @@ public class AuctionController {
 
   /**
    * Endpoint for making a auction end contract call.
-   *  
-   * @param bidder the name of the calling user
+   *
+   * @param bidder       the name of the calling user
    * @param contractAddr the contract ID in the form of 0.0.x
    * @return the call transaction record
    * @throws Exception
@@ -116,9 +115,9 @@ public class AuctionController {
 
   /**
    * Endpoint for making a single bid contract call.
-   * 
-   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
-   * @param amount the bidding amount in tiny bars
+   *
+   * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount       the bidding amount in tiny bars
    * @param contractAddr the contract ID in the form of 0.0.x
    * @return the transaction record of the call
    * @throws Exception
@@ -133,10 +132,11 @@ public class AuctionController {
   }
 
   /**
-   * Endpoint for making a single bid contract call and subsequently starting random bidding for demo purposes.
-   * 
-   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
-   * @param amount the bidding amount in tiny bars
+   * Endpoint for making a single bid contract call and subsequently starting random bidding for
+   * demo purposes.
+   *
+   * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount       the bidding amount in tiny bars
    * @param contractAddr the contract ID in the form of 0.0.x
    * @return the transaction record of the call
    * @throws Exception
@@ -153,11 +153,10 @@ public class AuctionController {
   }
 
   /**
-   * 
    * Make a single bid contract call.
-   * 
-   * @param bidder the name of the bidder, e.g. Alice, Bob, or Carol
-   * @param amount the bidding amount in tiny bars
+   *
+   * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount       the bidding amount in tiny bars
    * @param contractAddr the contract ID in the form of 0.0.x
    * @return the transaction record of the call
    * @throws Exception
@@ -182,8 +181,8 @@ public class AuctionController {
 
   /**
    * Endpoint for creating a new auction contract instance.
-   * 
-   * @param biddingTimeSec the auction duration in seconds
+   *
+   * @param biddingTimeSec  the auction duration in seconds
    * @param beneficiaryAddr the beneficiary account ID in the form of 0.0.x
    * @return contract ID of the created instance
    * @throws Exception
@@ -193,7 +192,7 @@ public class AuctionController {
   @ResponseBody
   public String newAuction(@PathVariable long biddingTimeSec, @PathVariable String beneficiaryAddr)
       throws Exception {
-  	history.clear();
+    history.clear();
     ContractId auctionContract = auctionService.createAuction(beneficiaryAddr, biddingTimeSec);
     DEFAULT_CONTRACT = "0.0." + auctionContract.contract;
     LOGGER.info("set DEFAULT_CONTRACT = " + DEFAULT_CONTRACT);
@@ -202,7 +201,7 @@ public class AuctionController {
 
   /**
    * Endpoint for getting the account ID and name of the bidders for the demo.
-   * 
+   *
    * @return the account ID to bidder name map
    */
   @GetMapping("/bidders")
@@ -212,6 +211,7 @@ public class AuctionController {
 
   /**
    * Endpoint for starting random bidding by Alice, Bob, and Carol.
+   *
    * @param contractId the contract ID in the form of 0.0.x
    * @return status of success
    * @throws Exception
@@ -270,8 +270,9 @@ public class AuctionController {
   }
 
   /**
-   * Endpoint for resetting an existing auction instance by restoring the state to when the auction instance was first deployed.
-   * 
+   * Endpoint for resetting an existing auction instance by restoring the state to when the auction
+   * instance was first deployed.
+   *
    * @param contractId the contract ID in the form of 0.0.x
    * @return transaction record of this reset contract call
    * @throws Exception
@@ -280,7 +281,7 @@ public class AuctionController {
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public String resetAuction(@PathVariable String contractId) throws Exception {
-  	history.clear();
+    history.clear();
     TransactionRecord record = auctionService.resetAuction(contractId);
     LOGGER.info("reset contract = " + contractId);
     return toString(record);
@@ -288,7 +289,7 @@ public class AuctionController {
 
   /**
    * Endpoint for starting an auction.
-   * 
+   *
    * @param contractId the contract ID in the form of 0.0.x
    * @return transaction record of this contract call
    * @throws Exception
@@ -323,7 +324,7 @@ public class AuctionController {
 				sb.append("\tcontractId: " + execResult.contractId).append(ln);
 			if(execResult.errorMessage != null) {
 				sb.append("\terrorMessage: " + execResult.errorMessage).append(ln);
-				sb.append("\tcontractCallResult: " + escapeBytes(execResult.asBytes())).append(ln);
+				sb.append("\tcontractCallResult: " + CommonUtils.escapeBytes(execResult.asBytes())).append(ln);
 			}
 
 			List<ContractLogInfo> logs = execResult.logs;
@@ -331,11 +332,11 @@ public class AuctionController {
 				for(ContractLogInfo log : logs) {
 					sb.append("\tlogInfo {\n");
 					sb.append("\t\tcontractId: " + log.contractId).append(ln);
-					sb.append("\t\tbloom: " + escapeBytes(log.bloom)).append(ln);
+					sb.append("\t\tbloom: " + CommonUtils.escapeBytes(log.bloom)).append(ln);
 					for(byte[] topic : log.topics) {
-						sb.append("\t\ttopic: " + escapeBytes(topic)).append(ln);
+						sb.append("\t\ttopic: " + CommonUtils.escapeBytes(topic)).append(ln);
 					}
-					sb.append("\t\tdata: " + escapeBytes(log.data)).append(ln);
+					sb.append("\t\tdata: " + CommonUtils.escapeBytes(log.data)).append(ln);
 					sb.append("\t}\n");
 				}
 			}
@@ -346,89 +347,4 @@ public class AuctionController {
 		return rv;
 	}
 
-	/**
-	 * Escape bytes for printing purpose.
-	 * 
-	 * @param input bytes to escape
-	 * @return escaped string
-	 */
-  public static String escapeBytes(final byte[] input) {
-  	 return escapeBytes (
-  	     new ByteSequence() {
-  	       @Override
-  	       public int size() {
-  	         return input.length;
-  	       }
-
-  	       @Override
-  	       public byte byteAt(int offset) {
-  	         return input[offset];
-  	       }
-  	     });
-  	}
-  
-  private interface ByteSequence {
-    int size();
-
-    byte byteAt(int offset);
-  }
-
-  /**
-   * Escapes bytes in the format used in protocol buffer text format, which is the same as the
-   * format used for C string literals. All bytes that are not printable 7-bit ASCII characters are
-   * escaped, as well as backslash, single-quote, and double-quote characters. Characters for which
-   * no defined short-hand escape sequence is defined will be escaped using 3-digit octal sequences.
-   */
-  static String escapeBytes(final ByteSequence input) {
-    final StringBuilder builder = new StringBuilder(input.size());
-    for (int i = 0; i < input.size(); i++) {
-      final byte b = input.byteAt(i);
-      switch (b) {
-          // Java does not recognize \a or \v, apparently.
-        case 0x07:
-          builder.append("\\a");
-          break;
-        case '\b':
-          builder.append("\\b");
-          break;
-        case '\f':
-          builder.append("\\f");
-          break;
-        case '\n':
-          builder.append("\\n");
-          break;
-        case '\r':
-          builder.append("\\r");
-          break;
-        case '\t':
-          builder.append("\\t");
-          break;
-        case 0x0b:
-          builder.append("\\v");
-          break;
-        case '\\':
-          builder.append("\\\\");
-          break;
-        case '\'':
-          builder.append("\\\'");
-          break;
-        case '"':
-          builder.append("\\\"");
-          break;
-        default:
-          // Only ASCII characters between 0x20 (space) and 0x7e (tilde) are
-          // printable.  Other byte values must be escaped.
-          if (b >= 0x20 && b <= 0x7e) {
-            builder.append((char) b);
-          } else {
-            builder.append('\\');
-            builder.append((char) ('0' + ((b >>> 6) & 3)));
-            builder.append((char) ('0' + ((b >>> 3) & 7)));
-            builder.append((char) ('0' + (b & 7)));
-          }
-          break;
-      }
-    }
-    return builder.toString();
-  }
 }

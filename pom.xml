@@ -8,8 +8,8 @@
   <artifactId>auctioneer</artifactId>
   <version>1.0-SNAPSHOT</version>
   <modules>
-    <module>auctioneer-events</module>
     <module>auction</module>
+    <module>auctioneer-events</module>
   </modules>
   <packaging>pom</packaging>
 
