@@ -1,19 +1,5 @@
 package com.opencrowd.dg.auction;
 
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-
-import org.apache.tomcat.util.buf.HexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.hashgraph.proto.TransactionBody;
@@ -28,7 +14,6 @@ import com.hedera.hashgraph.sdk.TransactionRecord;
 import com.hedera.hashgraph.sdk.account.AccountId;
 import com.hedera.hashgraph.sdk.contract.ContractCreateTransaction;
 import com.hedera.hashgraph.sdk.contract.ContractExecuteTransaction;
-import com.hedera.hashgraph.sdk.contract.ContractFunctionParams;
 import com.hedera.hashgraph.sdk.contract.ContractFunctionResult;
 import com.hedera.hashgraph.sdk.contract.ContractId;
 import com.hedera.hashgraph.sdk.crypto.PublicKey;
@@ -39,6 +24,18 @@ import com.hedera.hashgraph.sdk.file.FileCreateTransaction;
 import com.hedera.hashgraph.sdk.file.FileId;
 import com.hedera.hashgraph.sdk.file.FileInfo;
 import com.hedera.hashgraph.sdk.file.FileInfoQuery;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import org.apache.tomcat.util.buf.HexUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 /**
  * The service that powers the rest API endpoints.
@@ -62,11 +59,11 @@ public class AuctionService {
 
   private final static Logger log = LoggerFactory.getLogger(AuctionService.class);
 
-//  private static final String AUCTION_CONSTRUCTOR_ABI =
+  //  private static final String AUCTION_CONSTRUCTOR_ABI =
 //      "{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_biddingTime\",\"type\":\"uint256\"},{\"internalType\":\"address payable\",\"name\":\"_beneficiary\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}";
   private static int FILE_PART_SIZE = 4096; //4K bytes
   private Map<AccountId, Client> clients = new HashMap<>();
-	private long CONTRACT_CALL_GAS = 60000;
+  private long CONTRACT_CALL_GAS = 60000;
 
   @Autowired
   public AuctionService(
@@ -87,8 +84,9 @@ public class AuctionService {
     this.hederaNetwork = hederaNetwork;
     this.managerPublicKey = PublicKey.fromString(managerPublicKey);
     this.DEFAULT_CONTRACT_FILE = defaultContractFile;
-    if(defaultContract != null && !defaultContract.isBlank())
-    	this.DEFAULT_AUCTION_CONTRACT_ID = parseContractID(defaultContract);
+    if (defaultContract != null && !defaultContract.isBlank()) {
+      this.DEFAULT_AUCTION_CONTRACT_ID = parseContractID(defaultContract);
+    }
     aliceAccountId = parseAccountID(aliceAccount);
     bobAccountId = parseAccountID(bobAccount);
     carolAccountId = parseAccountID(carolAccount);
@@ -112,12 +110,12 @@ public class AuctionService {
    */
   private void addClient(AccountId accoutId, String accountKey) {
     Client client = null;
-		if (hederaNetwork.equals("mainnet")) {
-			client = Client.forMainnet();
-		} else // testnet
-		{
-			client = Client.forTestnet();
-		}
+    if (hederaNetwork.equals("mainnet")) {
+      client = Client.forMainnet();
+    } else // testnet
+    {
+      client = Client.forTestnet();
+    }
 
     Ed25519PrivateKey privateKey = Ed25519PrivateKey
         .fromString(Objects.requireNonNull(accountKey));
@@ -148,11 +146,11 @@ public class AuctionService {
    * @throws Throwable
    */
   public void createAuctionContractFile() throws Throwable {
-		if (DEFAULT_CONTRACT_FILE == null || DEFAULT_CONTRACT_FILE.isBlank()) {
-			uploadBinFile(managerAccountId);
-		} else {
-			AUCTION_BIN_FILE_ID = parseFileID(DEFAULT_CONTRACT_FILE);
-		}
+    if (DEFAULT_CONTRACT_FILE == null || DEFAULT_CONTRACT_FILE.isBlank()) {
+      uploadBinFile(managerAccountId);
+    } else {
+      AUCTION_BIN_FILE_ID = parseFileID(DEFAULT_CONTRACT_FILE);
+    }
   }
 
   /**
@@ -205,9 +203,9 @@ public class AuctionService {
       beneficiaryStr = beneficiaryAccount;
     }
     Client client = getClient(managerAccountId);
-  	byte[] data = createConstructorParams(biddingTime, beneficiaryStr);
-  	log.info("constructorParams = " + HexUtils.toHexString(data));
-    
+    byte[] data = createConstructorParams(biddingTime, beneficiaryStr);
+    log.info("constructorParams = " + HexUtils.toHexString(data));
+
     TransactionId contractTxId = new ContractCreateTransaction()
         .setAutoRenewPeriod(HederaConstants.DEFAULT_AUTORENEW_DURATION).setGas(217000)
         .setBytecodeFileId(AUCTION_BIN_FILE_ID)
@@ -221,19 +219,19 @@ public class AuctionService {
     TransactionReceipt contractReceipt = contractTxId.getReceipt(client);
     log.info(contractReceipt.toProto().toString());
     ContractId newContractId = contractReceipt.getContractId();
-    if(newContractId != null) {
-	    DEFAULT_AUCTION_CONTRACT_ID = newContractId;
-	    log.info(":) Auction contract created successfully, contract ID = " + newContractId);
+    if (newContractId != null) {
+      DEFAULT_AUCTION_CONTRACT_ID = newContractId;
+      log.info(":) Auction contract created successfully, contract ID = " + newContractId);
     } else {
-	    log.info("(: Auction contract failed to create!");
+      log.info("(: Auction contract failed to create!");
     }
     return newContractId;
   }
 
   public static void main(String[] args) throws InvalidProtocolBufferException {
-  	long biddingTime = 360;
+    long biddingTime = 360;
 
-  	byte[] data = createConstructorParams(biddingTime, "0.0.155271");
+    byte[] data = createConstructorParams(biddingTime, "0.0.155271");
 //    args.add(new Argument("address", ByteString.copyFrom(addressBytes).concat(padding.substring(19)), false));
 
     ContractCreateTransaction contractTx = new ContractCreateTransaction()
@@ -242,35 +240,36 @@ public class AuctionService {
         .setTransactionId(new TransactionId(new AccountId(155271)))
         .setNodeAccountId(new AccountId(3))
         .setBytecodeFileId(new FileId(0, 0, 12334));
-    TransactionBody body = TransactionBody.parseFrom(contractTx.toProto().getBodyBytes()); 
-    String hex = HexUtils.toHexString(body.getContractCreateInstance().getConstructorParameters().toByteArray());
-		log.info("param hex = " + hex);
-	}
-  
+    TransactionBody body = TransactionBody.parseFrom(contractTx.toProto().getBodyBytes());
+    String hex = HexUtils
+        .toHexString(body.getContractCreateInstance().getConstructorParameters().toByteArray());
+    log.info("param hex = " + hex);
+  }
+
   /**
    * Create the auction constructor param bytes.
-   * 
-   * @param biddingTime bidding time in seconds
+   *
+   * @param biddingTime           bidding time in seconds
    * @param beneficiaryAccountStr beneficiary account string in the form of 0.0.x
    * @return the constructor param data
    */
   private static byte[] createConstructorParams(long biddingTime, String beneficiaryAccountStr) {
-		byte[] beneficiary = convert2SolidityAddress(beneficiaryAccountStr);
-		
+    byte[] beneficiary = convert2SolidityAddress(beneficiaryAccountStr);
+
     ByteString data = null;
-	
+
     ByteString bidTime = ByteString.copyFrom(CommonUtils.longToBytes(biddingTime));
     ByteString paddingLong = ByteString.copyFrom(new byte[32 - bidTime.size()]);
 
     ByteString paddingAddress = ByteString.copyFrom(new byte[32 - beneficiary.length]);
     ByteString bene = ByteString.copyFrom(beneficiary);
-    
-    data = paddingLong.concat(bidTime).concat(paddingAddress).concat(bene);
-    
-		return data.toByteArray();
-	}
 
-	/**
+    data = paddingLong.concat(bidTime).concat(paddingAddress).concat(bene);
+
+    return data.toByteArray();
+  }
+
+  /**
    * Make a single bid contract call.
    *
    * @param bidder     the account ID of the bidder
@@ -442,7 +441,7 @@ public class AuctionService {
   public TransactionRecord endAuction(AccountId managerId, ContractId contractId) throws Exception {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
-        .setGas(CONTRACT_CALL_GAS )
+        .setGas(CONTRACT_CALL_GAS)
         .setContractId(contractId)
         .setFunction("auctionEnd")
         .execute(client);
@@ -538,7 +537,8 @@ public class AuctionService {
     log.info("file info: file size = " + fi.size + ", acl = " + fi.keys);
 
     byte[] content = getFileContent(fid);
-    Assert.isTrue(Arrays.equals(bytes, content), "uploaded content does not match what's on the network!");
+    Assert.isTrue(Arrays.equals(bytes, content),
+        "uploaded content does not match what's on the network!");
     return fid;
   }
 
@@ -620,7 +620,8 @@ public class AuctionService {
     Assert.notNull(newFileId, "created file ID is null!");
 
     byte[] downloadBytes = getFileContent(newFileId);
-    Assert.isTrue(Arrays.equals(bytes, downloadBytes), "created file content does not match the source content!");
+    Assert.isTrue(Arrays.equals(bytes, downloadBytes),
+        "created file content does not match the source content!");
     return newFileId;
   }
 
