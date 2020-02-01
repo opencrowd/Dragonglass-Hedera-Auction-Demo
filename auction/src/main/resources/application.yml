@@ -1,0 +1,14 @@
+server:
+  port: 8081
+logging.file: logs/auction.log
+logging:
+  file:
+    max-history: 20
+    max-size: 10MB
+  pattern:
+    console: "%d %-5level %logger : %msg%n"
+    file: "%d %-5level [%thread] %logger : %msg%n"
+  level:
+    org.springframework: ERROR
+    guru.springframework.controllers: INFO
+    com.opencrowd.dragonglass: INFO

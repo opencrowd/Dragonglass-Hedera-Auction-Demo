@@ -1,0 +1,19 @@
+hedera.network: mainnet
+hedera.account:
+  Alice:
+    ID: 
+    KEY: 
+  Bob:
+    ID: 
+    KEY: 
+  Carol:
+    ID: 
+    KEY: 
+  manager:
+    ID: 
+    KEY: 
+    PUBLIC_KEY: 
+  beneficiary:
+    ID: 
+#hedera.contract.bin.file: 
+#hedera.contract.default: 
