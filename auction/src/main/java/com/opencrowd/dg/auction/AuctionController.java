@@ -222,6 +222,7 @@ public class AuctionController {
     final Context context = new Context(1000L);
     final Timer timer = new Timer();
     final TimerTask timerTask = new TimerTask() {
+      private int counter = 0;
       private int index = 0;
 
       @Override
@@ -244,7 +245,7 @@ public class AuctionController {
             index++;
           }
         } catch (Exception e) {
-          LOGGER.error(e.getMessage(), e);
+          LOGGER.error(e.getMessage());
         }
       }
     };
