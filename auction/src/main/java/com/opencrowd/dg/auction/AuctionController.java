@@ -241,7 +241,7 @@ public class AuctionController {
             timer.purge();
             LOGGER.info("Stopped auto bidding!");
             return;
-          } else if (response.indexOf("SUCCESS") > -1) {
+          } else if (response.indexOf("Success") > -1) {
             index++;
           }
         } catch (Exception e) {

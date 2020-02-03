@@ -1,8 +1,6 @@
-import { HIGHESTBID } from '../types';
-
 export default function bid(state = 0, action) {
 	switch (action.type) {
-		case HIGHESTBID:
+		case "HIGHESTBID":
 			return action.payload;
 		default:
 			return state;

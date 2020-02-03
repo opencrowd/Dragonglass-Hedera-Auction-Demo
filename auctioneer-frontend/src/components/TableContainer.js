@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Table } from 'semantic-ui-react';
+import { connect } from 'react-redux';
 import { BidPaginator } from './BidPaginator';
+import { getBids } from '../reducers';
+import { getTransactions } from '../reducers';
 
 const TableContainer = ({ transactions = [], userMap }) => {
 
@@ -32,7 +35,7 @@ const TableContainer = ({ transactions = [], userMap }) => {
     };
     
 	const toEnd = () => {
-		setPage({ ...page, firstRow: (page.totalRows - page.rowsPerPage) })
+		setPage({ ...page, firstRow: (page.totalRows - /*page.totalRows % */page.rowsPerPage) })
     };
     
     let transactionsToDisplay = transactions && transactions.slice(parseInt(page.firstRow), (parseInt(page.firstRow) + parseInt(page.rowsPerPage)));
@@ -45,7 +48,9 @@ const TableContainer = ({ transactions = [], userMap }) => {
                 </Table.Cell>}
                 
                 {el && <Table.Cell className="account" style={{textAlign: "center"}}>
+                    {/* <a href={`https://testnet.dragonglass.me/hedera/transactions/${el.transactionID}`} target="_blank"> */}
                         {el.account}
+                    {/* </a> */}
                 </Table.Cell>}
                 
                 {el && <Table.Cell className="price" style={{textAlign: "center"}}>
@@ -69,6 +74,7 @@ const TableContainer = ({ transactions = [], userMap }) => {
                         <Table.HeaderCell style={{textAlign: "center"}}>Bid Account</Table.HeaderCell>
                         <Table.HeaderCell style={{textAlign: "center"}}>Bid Amount</Table.HeaderCell>
                         <Table.HeaderCell style={{textAlign: "right"}}>Time</Table.HeaderCell>
+                        {/* <Table.HeaderCell style={{textAlign: "center"}}>Success/Failure</Table.HeaderCell> */}
                     </Table.Row>
                     </Table.Header>
 
@@ -82,4 +88,9 @@ const TableContainer = ({ transactions = [], userMap }) => {
     )
 }
 
-export default TableContainer;
+const mapStateToProps = (state) => ({
+    bids: getBids(state),
+    //transactions: getTransactions(state)
+});
+
+export default connect(mapStateToProps)(TableContainer);

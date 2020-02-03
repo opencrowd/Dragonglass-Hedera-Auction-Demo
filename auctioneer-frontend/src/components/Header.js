@@ -3,15 +3,17 @@ import * as actions from '../actions';
 import { connect } from 'react-redux';
 import '../css/desktopHd.css'
 
-const Header = ({ resetAuction }) => {
+const Header = ({ resetAuction, setTime }) => {
 
     const handleReset = () => {
+        console.log("RESET CLICKED");
         resetAuction();
+        // setTime();
     }
 
     return (
         <div className="header">
-            <div className="heading span2">DragonGlass Auction Demo DApp</div>
+            {/*<div className="heading span1">A</div>*/}<div className="heading span2">DragonGlass Auction Demo DApp</div>
             <div className="spacer"></div>
             <img className="round-image" alt="" src={require("../img/Alice.png")} />
             <div className="bidder">Alice</div>

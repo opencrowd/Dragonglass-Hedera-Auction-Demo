@@ -1,5 +1,23 @@
 import * as api from '../apis';
 import * as types from '../types';
+// import * as constants from '../constants';
+
+export const fetchBids = () => (dispatch, getState) =>
+	api.fetchBids().then(
+		(response) => {
+			dispatch({
+				type: types.FETCH_BIDS_SUCCESS,
+				payload: response
+			});
+			return response;
+		},
+		(error) => {
+			dispatch({
+				type: types.FETCH_BIDS_FAILURE,
+				message: error.message || 'Something went wrong.'
+			});
+		}
+	);
 
 export const fetchTransactions = (contractId, apiKey) => (dispatch, getState) =>
 	api.fetchTransactions(contractId, apiKey).then(
@@ -19,7 +37,7 @@ export const fetchTransactions = (contractId, apiKey) => (dispatch, getState) =>
 		}
 	);
 
-const contractId = '0.0.29153';
+const contractId = '0.0.161367';
 const consensusStartInEpoch='1579576576000';
 
 //Fetch using DragonGlass RESTful API to fetch historical Calls made on the Contract
@@ -28,7 +46,7 @@ const consensusStartInEpoch='1579576576000';
 //contractMethodName : function name called( bid )
 //consensusStartInEpoch : send calls after the time
 export const fetchEvents = (apiKey) => (dispatch, getState) => {
-	return fetch(`https://api.dragonglass.me/hedera/api/contracts/${contractId}/calls?contractMethodName=1998aeef&consensusStartInEpoch=${consensusStartInEpoch}&status=SUCCESS&from=0&size=100&sortBy=desc`, {
+	return fetch(`https://api-testnet.dragonglass.me/hedera/api/contracts/${contractId}/calls?contractMethodName=1998aeef&consensusStartInEpoch=${consensusStartInEpoch}&status=SUCCESS&from=0&size=100&sortBy=desc`, {
 	method: 'GET',
 	headers: {
 		'x-api-key': apiKey,
@@ -48,7 +66,7 @@ export const fetchEvents = (apiKey) => (dispatch, getState) => {
         }
       });
 		}
-		dispatch({type: types.HIGHESTBID,
+		dispatch({type: "HIGHESTBID",
     		payload: events && events[0] ? events[0].amount : 0});
 		return (dispatch({type: types.FETCH_TRANSACTIONS_SUCCESS,
 		payload: events}))
@@ -98,4 +116,5 @@ export const fetchUsers = () => (dispatch, getState) => {
 export const resetAuction = () => (dispatch, getState) => { 
 	return fetch(`http://localhost:8081/startTimer/${contractId}`,
 	{method: 'POST'},)
+	.then(response => console.log(response));
 }
