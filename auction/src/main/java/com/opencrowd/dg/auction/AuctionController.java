@@ -245,7 +245,9 @@ public class AuctionController {
             index++;
           }
         } catch (Exception e) {
-          LOGGER.error(e.getMessage());
+          cancel();
+          timer.purge();
+          LOGGER.error(e.getMessage(), e);
         }
       }
     };
