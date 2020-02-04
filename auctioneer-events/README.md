@@ -4,7 +4,7 @@
 This project is the subscribe to DragonGlass queues created using [Realtime Live Subscription](https://app.dragonglass.me/hedera/subscriptionview).  
 Once the message is received, the message is then pushed to a websocket
 
-##Description
+## Description
 This application uses spring-cloud-aws-messaging to subscribe to DragonGlass Events. The application subscribes to 2 event queues, 
 one is for getting latest bid(HighestBidIncreased event emitted by contract call) and for auctionEnd(AuctionEnded event emitted by contract call).
 
