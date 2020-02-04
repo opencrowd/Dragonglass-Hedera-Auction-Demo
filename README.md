@@ -10,3 +10,5 @@ There are three modules in the application
 2. auctioneer-event : This module uses spring-cloud-aws-messaging to subscribe to DragonGlass events and spring-boot-websocket to pass the messages from DragonGlass queue to an open websocket.
 3. auctioneer-frontend : This module is built on react version 16.12 and connects to DragonGlass APIs and subscribes to websocket queue to get events and renders the data on the UI.
 
+## Enhancements & Issues
+For enhancements and issue, please create issue on [dragonglass-auction-demo](https://github.com/opencrowd/Dragonglass-Hedera-Auction-Demo/projects/1) project.
