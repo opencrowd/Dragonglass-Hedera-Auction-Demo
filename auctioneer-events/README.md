@@ -13,6 +13,62 @@ On receiving the message, it is passed to the Spring-boot-websocket STOMP broker
 ## Quickstart
 Run EventMain class
 
+### Sample Output
+#### Bid Event
+```json
+{
+  "functionName": "HighestBidIncreased",
+  "functionType": "event",
+  "inputNames": [
+    "bidder",
+    "amount"
+  ],
+  "inputTypes": [
+    "address",
+    "uint256"
+  ],
+  "inputValues": [
+    "0.0.156807",
+    "1008"
+  ],
+  "transactionID": {
+    "accountID": {
+      "num": 156807,
+      "shardNum": 0,
+      "realmNum": 0
+    },
+    "validStartDate": "2020-02-04T16:29:16.681829100Z"
+  }
+}
+```
+#### Winner Event
+```json
+{
+  "functionName": "AuctionEnded",
+  "functionType": "event",
+  "inputNames": [
+    "winner",
+    "amount"
+  ],
+  "inputTypes": [
+    "address",
+    "uint256"
+  ],
+  "inputValues": [
+    "0.0.156807",
+    "1008"
+  ],
+  "transactionID": {
+    "accountID": {
+      "num": 155274,
+      "shardNum": 0,
+      "realmNum": 0
+    },
+    "validStartDate": "2020-02-04T16:29:20.328925Z"
+  }
+}
+```
+
 ### Requirements
 
 - JDK 11
