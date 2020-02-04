@@ -37,7 +37,7 @@ export const fetchTransactions = (contractId, apiKey) => (dispatch, getState) =>
 		}
 	);
 
-const contractId = '0.0.161367';
+const contractId = '0.0.161470';
 const consensusStartInEpoch='1579576576000';
 
 //Fetch using DragonGlass RESTful API to fetch historical Calls made on the Contract

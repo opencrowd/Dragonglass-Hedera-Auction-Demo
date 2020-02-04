@@ -40,7 +40,7 @@ const BidContainer = ({ transactions=[], winner=[], placeBid, highestAmount, bid
                 </div>
                 }
 
-                {!winner || winner.length === 0 &&
+                {(!winner || winner.length === 0) &&
                 <div className="input-row">
                     <input className="bid-input" placeholder="Enter your bid" value={inputValue} onChange={e => handleChange(e)} />
                     <button className="bid-button" onClick={handleClick} disabled={inputValue===''} >Place Bid</button>
