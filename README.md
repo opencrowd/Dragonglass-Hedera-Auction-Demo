@@ -1,5 +1,5 @@
 # Dragonglass-Hedera-Auction-Demo 
-This repo Sample auction dApp shown in the [Hedera Virtual Meetup: Building on Hedera Hashgraph with OpenCrowd &amp; DragonGlass](https://youtu.be/oA6riJv3RRA).
+This repo contain the code for Sample auction dApp presented in the [Hedera Virtual Meetup: Building on Hedera Hashgraph with OpenCrowd &amp; DragonGlass](https://youtu.be/oA6riJv3RRA).
 
 ## Overview 
 This is a reference application for DApp developers to quickly able to setup an application running on Hedera networks.
