@@ -173,6 +173,7 @@ public class HcsDemoController extends AuctionBase {
         + "}" );
     ended = true;
     
+    LOGGER.info(result);
     return ResponseEntity.ok(result);
   }
 
