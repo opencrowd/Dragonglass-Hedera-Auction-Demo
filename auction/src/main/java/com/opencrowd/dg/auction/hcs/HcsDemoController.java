@@ -208,7 +208,7 @@ public class HcsDemoController extends AuctionBase {
     
     history.put(getKey(bidder, id), bid);
     String rv = auctionService.sendMessage(bidderAddr, parseTopicID(topicId),
-        String.format("{\"type\": \"bid\", \"bidder\": \"%s\", \"amount:\": %d}", bidder, amount));
+        String.format("{\"type\": \"bid\", \"bidder\": \"%s\", \"amount\": %d}", bidder, amount));
     
     if(rv.contains("Success")) {
     	highestBid = bid;

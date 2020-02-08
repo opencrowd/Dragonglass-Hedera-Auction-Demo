@@ -4,10 +4,12 @@ cloud:
       auto: false
     region:
       static: us-east-1
+    credentials:
+      accessKey: AKIASN2O7DKQSZNGCROA
+      secretKey: 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
 dragonglass:
   queue:
-    bid:
-    auctionEnd:
+    topic:
 logging.file: C:/logs/auctioneer-event.log
 logging:
   file:

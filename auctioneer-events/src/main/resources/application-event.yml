@@ -1,0 +1,24 @@
+cloud:
+  aws:
+    stack:
+      auto: false
+    region:
+      static: us-east-1
+    credentials:
+      accessKey: AKIASN2O7DKQSZNGCROA
+      secretKey: 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
+dragonglass:
+  queue:
+    bid:
+    auctionEnd:
+logging.file: C:/logs/auctioneer-event.log
+logging:
+  file:
+  pattern:
+    console: "%d %-5level %logger : %msg%n"
+    file: "%d %-5level [%thread] %logger : %msg%n"
+  level:
+    org.springframework: DEBUG
+    guru.springframework.controllers: DEBUG
+    com.opencrowd.dragonglass: DEBUG
+    org.apache.kafka: DEBUG
