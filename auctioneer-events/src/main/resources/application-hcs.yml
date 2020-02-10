@@ -9,7 +9,7 @@ cloud:
       secretKey: uTA1duQON7lXqoVquy+6z0Eu2Kr1aG/ANKAKtnIv
 dragonglass:
   queue:
-    topic:
+    topic: mahajanashuoutlookcom_c83c10f093864a06bd3dca956c5b5fcd.fifo
 logging.file: C:/logs/auctioneer-event.log
 logging:
   file:
@@ -19,5 +19,5 @@ logging:
   level:
     org.springframework: DEBUG
     guru.springframework.controllers: DEBUG
-    com.opencrowd.dragonglass: DEBUG
-    org.apache.kafka: DEBUG
+    com.opencrowd.dragonglass: INFO
+    org.apache.kafka: INFO

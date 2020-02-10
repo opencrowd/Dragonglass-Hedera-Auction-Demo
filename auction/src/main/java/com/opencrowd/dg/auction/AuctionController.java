@@ -1,12 +1,14 @@
 package com.opencrowd.dg.auction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hedera.hashgraph.sdk.TransactionRecord;
+import com.hedera.hashgraph.sdk.account.AccountId;
+import com.hedera.hashgraph.sdk.contract.ContractId;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,12 +22,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-
-import com.hedera.hashgraph.sdk.TransactionRecord;
-import com.hedera.hashgraph.sdk.account.AccountId;
-import com.hedera.hashgraph.sdk.contract.ContractFunctionResult;
-import com.hedera.hashgraph.sdk.contract.ContractId;
-import com.hedera.hashgraph.sdk.contract.ContractLogInfo;
 
 /**
  * Provides REST API to auction contract deployed on Hedera networks.
@@ -44,6 +40,9 @@ public class AuctionController {
   private AuctionService auctionService;
 
   private final static Logger LOGGER = LoggerFactory.getLogger(AuctionController.class);
+
+  @Autowired
+  private ObjectMapper objectMapper;
 
   @Autowired
   public AuctionController(AuctionService auctionService,
@@ -110,7 +109,7 @@ public class AuctionController {
 
     TransactionRecord record = auctionService.endAuction(bidderAddr, contractAddr);
 
-    return toString(record);
+    return objectMapper.writeValueAsString(record);
   }
 
   /**
@@ -176,7 +175,7 @@ public class AuctionController {
     TransactionRecord record = auctionService.bid(bid);
     LOGGER.info("path bid submitted: bid = " + bid);
 
-    return toString(record);
+    return objectMapper.writeValueAsString(record);
   }
 
   /**
@@ -287,7 +286,7 @@ public class AuctionController {
     history.clear();
     TransactionRecord record = auctionService.resetAuction(contractId);
     LOGGER.info("reset contract = " + contractId);
-    return toString(record);
+    return objectMapper.writeValueAsString(record);
   }
 
   /**
@@ -303,51 +302,7 @@ public class AuctionController {
   public String startTimer(@PathVariable String contractId) throws Exception {
     TransactionRecord record = auctionService.startTimer(contractId);
     LOGGER.info("restarted timer for contract = " + contractId);
-    return toString(record);
+    return objectMapper.writeValueAsString(record);
   }
-
-  /**
-   * Convert transaction record to string
-   * @param record transaction record to be converted
-   * @return converted string
-   */
-	private String toString(TransactionRecord record) {
-		StringBuffer sb = new StringBuffer();
-		String ln = "\n";
-		sb
-		.append("receipt status: " + record.receipt.status.name()).append(ln)
-		.append("consensusTimestamp: " + record.consensusTimestamp).append(ln)
-		.append("transactionID: " + record.transactionId).append(ln)
-		.append("transactionFee: " + record.transactionFee).append(ln);
-		
-		ContractFunctionResult execResult = record.getContractExecuteResult();
-		if(execResult != null) {
-			sb.append("contractCallResult {\n\tgasUsed: " + execResult.gasUsed).append(ln);
-			if(execResult.contractId.contract != 0)
-				sb.append("\tcontractId: " + execResult.contractId).append(ln);
-			if(execResult.errorMessage != null) {
-				sb.append("\terrorMessage: " + execResult.errorMessage).append(ln);
-				sb.append("\tcontractCallResult: " + CommonUtils.escapeBytes(execResult.asBytes())).append(ln);
-			}
-
-			List<ContractLogInfo> logs = execResult.logs;
-			if(logs != null) {
-				for(ContractLogInfo log : logs) {
-					sb.append("\tlogInfo {\n");
-					sb.append("\t\tcontractId: " + log.contractId).append(ln);
-					sb.append("\t\tbloom: " + CommonUtils.escapeBytes(log.bloom)).append(ln);
-					for(byte[] topic : log.topics) {
-						sb.append("\t\ttopic: " + CommonUtils.escapeBytes(topic)).append(ln);
-					}
-					sb.append("\t\tdata: " + CommonUtils.escapeBytes(log.data)).append(ln);
-					sb.append("\t}\n");
-				}
-			}
-			sb.append("}\n");
-		}
-			
-		String rv = sb.toString();
-		return rv;
-	}
 
 }

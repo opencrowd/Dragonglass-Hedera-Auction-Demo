@@ -1,19 +1,19 @@
 hedera.network: testnet
 hedera.account:
   Alice:
-    ID: 
-    KEY: 
+    ID: 0.0.155274
+    KEY: 302e020100300506032b657004220420109e9c1c4c70adfbd914d0ed71211d7f6dc27430a4972952267e54f859f3a89e
   Bob:
-    ID: 
-    KEY: 
+    ID: 0.0.156804
+    KEY: 302e020100300506032b657004220420b7ee26ec5612e64ae269abcdf7bb5b8fd85f65bf85046e9989a362d09bbe8b56
   Carol:
-    ID: 
-    KEY: 
+    ID: 0.0.156807
+    KEY: 302e020100300506032b657004220420c9514e43235370217e29a35bd651b3b120fed15d37671db433bd8d2c7da64a93
   manager:
-    ID: 
-    KEY: 
-    PUBLIC_KEY: 
+    ID: 0.0.155271
+    KEY: 302e020100300506032b6570042204204e808f15c496be1a0cd9c2ce6ac192c8caee72a71109e7d2dbd714d7af26e9a8
+    PUBLIC_KEY: 302a300506032b6570032100a21bd3062a9048aa15615e68aa5fcda56bd36e32a1dd9dbec8ba532e86643e45
   beneficiary:
-    ID: 
-#hedera.contract.bin.file: 
-#hedera.contract.default: 
+    ID: 0.0.155271
+hedera.contract.bin.file: 0.0.157342
+hedera.contract.default: 0.0.157718

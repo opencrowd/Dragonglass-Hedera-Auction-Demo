@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
 import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +25,13 @@ public class HcsMessageListener {
   @Autowired
   private ObjectMapper objectMapper;
 
+  @Autowired
+  private SimpMessagingTemplate brokerMessagingTemplate;
+
+  private final String bidResponse = "{\"bidder\": \"%s\", \"account\": \"%s\", \"amount\": %d, \"consensusTime\": \"%s\"}";
+  private final String auctionEndResponse = "{\"winner\": \"%s\", \"account\": \"%s\", \"amount\": %d}";
+
+
   @SqsListener("${dragonglass.queue.topic:hashscan-test}")
   public void incomingBid(String message,
       @Header("SenderId") String senderId) {
@@ -33,11 +41,24 @@ public class HcsMessageListener {
       String messageString = new String(Hex.decodeHex(messageHex.toCharArray()),
           StandardCharsets.UTF_8);
       JsonNode messageRoot = objectMapper.readTree(messageString);
-      String bidder = messageRoot.get("bidder").toString();
-      Long amount = messageRoot.get("amount").asLong();
-      LOGGER.info("Bidder : "+bidder+"   Amount: "+amount );
+      String consensusTime = root.get("consensusTime").textValue();
+      if (messageRoot.get("type").asText().equals("bid")) {
+        String bidder = messageRoot.get("bidder").asText();
+        String bidderAddr = messageRoot.get("bidderAddr").asText();
+        Long amount = messageRoot.get("amount").asLong();
+        String data = String.format(bidResponse, bidder, bidderAddr, amount, consensusTime);
+        LOGGER.info("Bid: :" + data);
+        brokerMessagingTemplate.convertAndSend("/queue/bid", data);
+      } else if (messageRoot.get("type").asText().equals("auctionEnd")) {
+        String winner = messageRoot.get("highestBidder").asText();
+        String bidderAddr = messageRoot.get("highestBidderAddress").asText();
+        Long amount = messageRoot.get("highestBid").asLong();
+        String data = String.format(auctionEndResponse, winner, bidderAddr, amount);
+        LOGGER.info("Winner: :" + data);
+        brokerMessagingTemplate.convertAndSend("/queue/auctionEnd", data);
+      }
     } catch (JsonProcessingException | DecoderException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 
