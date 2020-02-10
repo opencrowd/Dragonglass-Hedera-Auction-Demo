@@ -1,12 +1,10 @@
 package com.opencrowd.dg.auction.hcs;
 
-import com.hedera.hashgraph.sdk.consensus.ConsensusTopicId;
-import com.opencrowd.dg.auction.AuctionBase;
-import com.opencrowd.dg.auction.Bid;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +18,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.hedera.hashgraph.sdk.consensus.ConsensusTopicId;
+import com.opencrowd.dg.auction.AuctionBase;
+import com.opencrowd.dg.auction.Bid;
+
+/**
+ * This controller enforces the auction business logic and provides a set rest API for the auction based on HCS
+ */
 @Controller(value = "hcs")
 public class HcsDemoController extends AuctionBase {
 
@@ -80,8 +85,8 @@ public class HcsDemoController extends AuctionBase {
    * Endpoint for resetting an existing auction instance by restoring the state to when the auction
    * instance was first deployed.
    *
-   * @param contractId the contract ID in the form of 0.0.x
-   * @return transaction record of this reset contract call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return transaction result of this reset HCS message submission
    * @throws Exception
    */
   @PostMapping("/hcs/auction/resetAuction/{topicId}")
@@ -114,8 +119,8 @@ public class HcsDemoController extends AuctionBase {
   /**
    * Endpoint for starting an auction.
    *
-   * @param contractId the contract ID in the form of 0.0.x
-   * @return transaction record of this contract call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of this HCS message tx
    * @throws Exception
    */
   @PostMapping("/hcs/auction/startTimer/{topicId}")
@@ -132,12 +137,19 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Endpoint for making a single bid contract call.
+   * Endpoint for making a single bid.
    *
+<<<<<<< HEAD
+   * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount       the bidding amount in tiny bars
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the HCS message tx
+=======
    * @param bidder  the name of the bidder, e.g. Alice, Bob, or Carol
    * @param amount  the bidding amount in tiny bars
    * @param topicId the contract ID in the form of 0.0.x
    * @return the transaction record of the call
+>>>>>>> master
    * @throws Exception
    */
   @PostMapping("/hcs/auction/singleBid/{bidder}/{amount}/{topicId}")
@@ -149,13 +161,13 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Endpoint for making a single bid contract call and subsequently starting random bidding for
+   * Endpoint for making a single bid and subsequently starting random bidding for
    * demo purposes.
    *
    * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
    * @param amount       the bidding amount in tiny bars
-   * @param contractAddr the contract ID in the form of 0.0.x
-   * @return the transaction record of the call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the first HCS message tx
    * @throws Exception
    */
   @PostMapping("/hcs/auction/bid/{bidder}/{amount}/{topicId}")
@@ -194,12 +206,12 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Make a single bid contract call.
+   * Make a single bid via a HCS message.
    *
-   * @param bidder  the name of the bidder, e.g. Alice, Bob, or Carol
-   * @param amount  the bidding amount in tiny bars
-   * @param topicId the contract ID in the form of 0.0.x
-   * @return the transaction record of the call
+   * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
+   * @param amount       the bidding amount in tiny bars
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the HCS message tx
    * @throws Exception
    */
   public String bidAuction(String bidder, long amount, String topicId) throws Exception {
@@ -237,63 +249,62 @@ public class HcsDemoController extends AuctionBase {
     return rv;
   }
 
+	/**
+	 * Random bidding by Alice, Bob, and Carol.
+	 *
+	 * @param topicId the topic ID in the form of 0.0.x
+	 * @return status of success
+	 * @throws Exception
+	 */
+	public ResponseEntity<Map<String, String>> initiateRandomBidding(String topicId)
+	    throws Exception {
+	  final Context context = new Context(1000L);
+	  final Timer timer = new Timer();
+	  final TimerTask timerTask = new TimerTask() {
+	    private int index = 0;
+	
+	    @Override
+	    public void run() {
+	      try {
+	        if (index >= userList.length) {
+	          index = 0;
+	        }
+	        final String bidder = userList[index];
+	        long bid = context.getBid();
+	        context.setBid(++bid);
+	        final String response = bidAuction(bidder, bid, topicId);
+	        LOGGER.info(response);
+	        if (isAuctionTimeExpired()) {
+	        	endAuction(topicId);
+	          cancel();
+	          timer.purge();
+	          LOGGER.info("Stopped auto bidding!");
+	          return;
+	        } else if (response.indexOf("Success") > -1) {
+	          index++;
+	        }
+	      } catch (Exception e) {
+	        cancel();
+	        timer.purge();
+	        LOGGER.error(e.getMessage(), e);
+	      }
+	    }
+	  };
+	  timer.schedule(timerTask, 2000, 3000);
+	  return ResponseEntity.ok(Map.of("status", "success"));
+	}
 
-  /**
-   * Random bidding by Alice, Bob, and Carol.
-   *
-   * @param topicId the contract ID in the form of 0.0.x
-   * @return status of success
-   * @throws Exception
-   */
-  public ResponseEntity<Map<String, String>> initiateRandomBidding(String topicId)
-      throws Exception {
-    final Context context = new Context(1000L);
-    final Timer timer = new Timer();
-    final TimerTask timerTask = new TimerTask() {
-      //	    private int counter = 0;
-      private int index = 0;
-
-      @Override
-      public void run() {
-        try {
-          if (index >= userList.length) {
-            index = 0;
-          }
-          final String bidder = userList[index];
-          long bid = context.getBid();
-          context.setBid(++bid);
-          final String response = bidAuction(bidder, bid, topicId);
-          LOGGER.info(response);
-          if (isAuctionTimeExpired()) {
-            endAuction(topicId);
-            cancel();
-            timer.purge();
-            LOGGER.info("Stopped auto bidding!");
-            return;
-          } else if (response.indexOf("Success") > -1) {
-            index++;
-          }
-        } catch (Exception e) {
-          cancel();
-          timer.purge();
-          LOGGER.error(e.getMessage(), e);
-        }
-      }
-    };
-    timer.schedule(timerTask, 2000, 3000);
-    return ResponseEntity.ok(Map.of("status", "success"));
-  }
-
-  protected boolean isAuctionTimeExpired() {
-    Boolean rv = false;
-    if (ended) {
-      rv = true;
-    } else {
-      rv = System.currentTimeMillis() >= auctionEndTime;
-    }
-
-    return rv;
-  }
+	protected boolean isAuctionTimeExpired() {
+		Boolean rv = false;
+		if(ended)
+			rv = true;
+		else
+		{
+			rv = System.currentTimeMillis() >= auctionEndTime;
+		}
+		
+		return rv;
+	}
 
   /**
    * Endpoint for getting the account ID and name of the bidders for the demo.
@@ -308,15 +319,14 @@ public class HcsDemoController extends AuctionBase {
   /**
    * Parse topic string in the form of "0.0.x".
    *
-   * @param contractString topic in string form
+   * @param topicString topic in string form
    * @return converted topic ID
    */
-  public static ConsensusTopicId parseTopicID(String contractString) {
-    String[] parts = contractString.split("\\.");
-    ConsensusTopicId contractId = new ConsensusTopicId(Long.parseLong(parts[0]),
-        Long.parseLong(parts[1]),
+  public static ConsensusTopicId parseTopicID(String topicString) {
+    String[] parts = topicString.split("\\.");
+    ConsensusTopicId topicId = new ConsensusTopicId(Long.parseLong(parts[0]), Long.parseLong(parts[1]),
         Long.parseLong(parts[2]));
-    return contractId;
+    return topicId;
   }
 
 }

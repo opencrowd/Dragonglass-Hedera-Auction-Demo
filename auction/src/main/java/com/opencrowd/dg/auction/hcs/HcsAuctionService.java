@@ -101,8 +101,8 @@ public class HcsAuctionService {
     final long topicSeqNumber = receipt.getConsensusTopicSequenceNumber();
     final byte[] topicRunningHash = receipt.getConsensusTopicRunningHash();
     String rv = String
-        .format("Success: Submitted Message on %s with topicSeqNumber %d and topicRunningHash %s", topicID,
-            topicSeqNumber, HexUtils.toHexString(topicRunningHash));
+        .format("Success: Submitted Message on %s with topicSeqNumber %d and topicRunningHash %s, txId=%s", topicID,
+            topicSeqNumber, HexUtils.toHexString(topicRunningHash), transactionId.toString());
     rv += "\nmessage content ==> " + message;
 //    LOGGER.info(rv);
     return rv;
