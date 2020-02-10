@@ -22,6 +22,11 @@ import com.hedera.hashgraph.sdk.consensus.ConsensusTopicId;
 import com.opencrowd.dg.auction.AuctionBase;
 import com.opencrowd.dg.auction.Bid;
 
+/**
+ * This controller enforces the auction business logic and provides a set rest API for the auction based on HCS
+ * @author Hua Li
+ * Created on 2020-02-10
+ */
 @Controller(value = "hcs")
 public class HcsDemoController extends AuctionBase {
 
@@ -75,8 +80,8 @@ public class HcsDemoController extends AuctionBase {
    * Endpoint for resetting an existing auction instance by restoring the state to when the auction
    * instance was first deployed.
    *
-   * @param contractId the contract ID in the form of 0.0.x
-   * @return transaction record of this reset contract call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return transaction result of this reset HCS message submission
    * @throws Exception
    */
   @PostMapping("/hcs/auction/resetAuction/{topicId}")
@@ -101,8 +106,8 @@ public class HcsDemoController extends AuctionBase {
   /**
    * Endpoint for starting an auction.
    *
-   * @param contractId the contract ID in the form of 0.0.x
-   * @return transaction record of this contract call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of this HCS message tx
    * @throws Exception
    */
   @PostMapping("/hcs/auction/startTimer/{topicId}")
@@ -118,12 +123,12 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Endpoint for making a single bid contract call.
+   * Endpoint for making a single bid.
    *
    * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
    * @param amount       the bidding amount in tiny bars
-   * @param topicId the contract ID in the form of 0.0.x
-   * @return the transaction record of the call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the HCS message tx
    * @throws Exception
    */
   @PostMapping("/hcs/auction/singleBid/{bidder}/{amount}/{topicId}")
@@ -135,13 +140,13 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Endpoint for making a single bid contract call and subsequently starting random bidding for
+   * Endpoint for making a single bid and subsequently starting random bidding for
    * demo purposes.
    *
    * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
    * @param amount       the bidding amount in tiny bars
-   * @param contractAddr the contract ID in the form of 0.0.x
-   * @return the transaction record of the call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the first HCS message tx
    * @throws Exception
    */
   @PostMapping("/hcs/auction/bid/{bidder}/{amount}/{topicId}")
@@ -178,12 +183,12 @@ public class HcsDemoController extends AuctionBase {
   }
 
   /**
-   * Make a single bid contract call.
+   * Make a single bid via a HCS message.
    *
    * @param bidder       the name of the bidder, e.g. Alice, Bob, or Carol
    * @param amount       the bidding amount in tiny bars
-   * @param topicId the contract ID in the form of 0.0.x
-   * @return the transaction record of the call
+   * @param topicId the topic ID in the form of 0.0.x
+   * @return result of the HCS message tx
    * @throws Exception
    */
   public String bidAuction(String bidder, long amount, String topicId) throws Exception {
@@ -223,7 +228,7 @@ public class HcsDemoController extends AuctionBase {
 	/**
 	 * Random bidding by Alice, Bob, and Carol.
 	 *
-	 * @param topicId the contract ID in the form of 0.0.x
+	 * @param topicId the topic ID in the form of 0.0.x
 	 * @return status of success
 	 * @throws Exception
 	 */
@@ -291,14 +296,14 @@ public class HcsDemoController extends AuctionBase {
   /**
    * Parse topic string in the form of "0.0.x".
    *
-   * @param contractString topic in string form
+   * @param topicString topic in string form
    * @return converted topic ID
    */
-  public static ConsensusTopicId parseTopicID(String contractString) {
-    String[] parts = contractString.split("\\.");
-    ConsensusTopicId contractId = new ConsensusTopicId(Long.parseLong(parts[0]), Long.parseLong(parts[1]),
+  public static ConsensusTopicId parseTopicID(String topicString) {
+    String[] parts = topicString.split("\\.");
+    ConsensusTopicId topicId = new ConsensusTopicId(Long.parseLong(parts[0]), Long.parseLong(parts[1]),
         Long.parseLong(parts[2]));
-    return contractId;
+    return topicId;
   }
 
 }
