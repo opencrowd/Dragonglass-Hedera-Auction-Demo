@@ -37,7 +37,7 @@ const MainContainer = (props) => {
     }
 
     const displayWinner = (data) => {
-        setWinner(data.inputValues);
+        setWinner(data);
     }
 
     let highestAmount = 0;
@@ -59,6 +59,7 @@ const MainContainer = (props) => {
                 });
                 stompClient.subscribe('/queue/auctionEnd', function({body}) {
                       let response  = JSON.parse(body);
+                      console.log(response);
                       displayWinner(response);
                   });
             });
