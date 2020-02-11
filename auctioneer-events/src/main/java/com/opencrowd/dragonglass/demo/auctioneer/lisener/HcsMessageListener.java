@@ -42,7 +42,9 @@ public class HcsMessageListener {
           StandardCharsets.UTF_8);
       JsonNode messageRoot = objectMapper.readTree(messageString);
       String consensusTime = root.get("consensusTime").textValue();
-      if (messageRoot.get("type").asText().equals("bid")) {
+      if (!messageRoot.has("type")) {
+        LOGGER.info("Incoming Message: " + messageString);
+      } else if (messageRoot.get("type").asText().equals("bid")) {
         String bidder = messageRoot.get("bidder").asText();
         String bidderAddr = messageRoot.get("bidderAddr").asText();
         Long amount = messageRoot.get("amount").asLong();

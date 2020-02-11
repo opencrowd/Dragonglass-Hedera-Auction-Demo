@@ -1,5 +1,7 @@
 package com.opencrowd.dg.auction.hcs;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hedera.hashgraph.sdk.Client;
 import com.hedera.hashgraph.sdk.HederaStatusException;
 import com.hedera.hashgraph.sdk.TransactionId;
@@ -13,10 +15,10 @@ import com.hedera.hashgraph.sdk.crypto.ed25519.Ed25519PrivateKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.tomcat.util.buf.HexUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +33,11 @@ public class HcsAuctionService {
   private AccountId carolAccountId;
   private final AccountId managerAccountId;
 
+  @Autowired
+  private ObjectMapper objectMapper;
+
   public HcsAuctionService(
-  		@Value("${hedera.network}") String hederaNetwork,
+      @Value("${hedera.network}") String hederaNetwork,
       @Value("${hedera.account.Alice.ID}") String aliceAccount,
       @Value("${hedera.account.Alice.KEY}") String aliceKey,
       @Value("${hedera.account.Bob.ID}") String bobAccount,
@@ -87,11 +92,13 @@ public class HcsAuctionService {
     LOGGER.info("Your updated topic ID is: " + topicId);
   }
 
-  public String sendMessage(ConsensusTopicId topicID, String message) throws HederaStatusException {
-  	return sendMessage(managerAccountId.toString(), topicID, message);
+  public String sendMessage(ConsensusTopicId topicID, String message)
+      throws HederaStatusException, JsonProcessingException {
+    return sendMessage(managerAccountId.toString(), topicID, message);
   }
-  
-  public String sendMessage(String bidder, ConsensusTopicId topicID, String message) throws HederaStatusException {
+
+  public String sendMessage(String bidder, ConsensusTopicId topicID, String message)
+      throws HederaStatusException, JsonProcessingException {
     Client client = getClient(parseAccountID(bidder));
     final TransactionId transactionId = new ConsensusMessageSubmitTransaction()
         .setTopicId(topicID)
@@ -101,10 +108,12 @@ public class HcsAuctionService {
     final long topicSeqNumber = receipt.getConsensusTopicSequenceNumber();
     final byte[] topicRunningHash = receipt.getConsensusTopicRunningHash();
     String rv = String
-        .format("Success: Submitted Message on %s with topicSeqNumber %d and topicRunningHash %s", topicID,
+        .format(
+            "{\"status\": \"Success\", \"message\": \"Submitted Message on %s with topicSeqNumber %d and topicRunningHash %s\"}",
+            topicID,
             topicSeqNumber, HexUtils.toHexString(topicRunningHash));
     rv += "\nmessage content ==> " + message;
-//    LOGGER.info(rv);
+    LOGGER.info(rv);
     return rv;
   }
 
