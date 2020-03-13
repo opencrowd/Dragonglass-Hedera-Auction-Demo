@@ -1,11 +1,28 @@
 package com.opencrowd.dg.auction;
 
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.tomcat.util.buf.HexUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.hedera.hashgraph.proto.TransactionBody;
 import com.hedera.hashgraph.sdk.Client;
+import com.hedera.hashgraph.sdk.Hbar;
 import com.hedera.hashgraph.sdk.HederaConstants;
 import com.hedera.hashgraph.sdk.HederaNetworkException;
+import com.hedera.hashgraph.sdk.HederaReceiptStatusException;
+import com.hedera.hashgraph.sdk.HederaRecordStatusException;
 import com.hedera.hashgraph.sdk.HederaStatusException;
 import com.hedera.hashgraph.sdk.Status;
 import com.hedera.hashgraph.sdk.TransactionId;
@@ -24,18 +41,6 @@ import com.hedera.hashgraph.sdk.file.FileCreateTransaction;
 import com.hedera.hashgraph.sdk.file.FileId;
 import com.hedera.hashgraph.sdk.file.FileInfo;
 import com.hedera.hashgraph.sdk.file.FileInfoQuery;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import org.apache.tomcat.util.buf.HexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 /**
  * The service that powers the rest API endpoints.
@@ -64,6 +69,7 @@ public class AuctionService {
   private static int FILE_PART_SIZE = 4096; //4K bytes
   private Map<AccountId, Client> clients = new HashMap<>();
   private long CONTRACT_CALL_GAS = 60000;
+	private long MAX_TX_FEE = 2000_000_000;
 
   @Autowired
   public AuctionService(
@@ -207,7 +213,9 @@ public class AuctionService {
     log.info("constructorParams = " + HexUtils.toHexString(data));
 
     TransactionId contractTxId = new ContractCreateTransaction()
-        .setAutoRenewPeriod(HederaConstants.DEFAULT_AUTORENEW_DURATION).setGas(217000)
+    		.setTransactionMemo("[Opencrowd auction demo with events: new auction]")
+        .setAutoRenewPeriod(HederaConstants.DEFAULT_AUTORENEW_DURATION)
+        .setGas(217000)
         .setBytecodeFileId(AUCTION_BIN_FILE_ID)
         .setContractMemo("OpenCrowd Dragonglass Auction Demo Contract")
         .setConstructorParams(data)
@@ -216,7 +224,7 @@ public class AuctionService {
         .setMaxTransactionFee(1500000000l)
         .execute(client);
 
-    TransactionReceipt contractReceipt = contractTxId.getReceipt(client);
+    TransactionReceipt contractReceipt = getReceipt(contractTxId, client);
     log.info(contractReceipt.toProto().toString());
     ContractId newContractId = contractReceipt.getContractId();
     if (newContractId != null) {
@@ -283,13 +291,15 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(bidder);
     TransactionId transactionId = new ContractExecuteTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: bid]")
+        .setMaxTransactionFee(MAX_TX_FEE)
         .setGas(CONTRACT_CALL_GAS)
         .setContractId(contractId)
         .setFunction("bid")
         .setPayableAmount(bidAmount)
         .execute(client);
 
-    TransactionRecord record = transactionId.getRecord(client);
+    TransactionRecord record = getRecord(transactionId, client);
     log.info("bid call record = " + record);
 
     ContractFunctionResult contractCallResult = record.getContractExecuteResult();
@@ -306,12 +316,14 @@ public class AuctionService {
    *
    * @param bid the Bid object used for the call
    * @return the transaction record of the call
+   * @throws HederaStatusException 
+   * @throws HederaNetworkException 
    * @throws Exception
    */
-  public TransactionRecord bid(Bid bid) throws Exception {
+  public TransactionRecord bid(Bid bid) throws HederaNetworkException, HederaStatusException {
     AccountId bidder = parseAccountID(bid.getBidderAddr());
-    TransactionRecord rv = bid(bidder, parseContractID(bid.getContractAddr()), bid.getAmount());
-    return rv;
+    TransactionRecord record = bid(bidder, parseContractID(bid.getContractAddr()), bid.getAmount());
+    return record;
   }
 
   public AccountId getAliceAccount() {
@@ -368,12 +380,14 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: start timer]")
+        .setMaxTransactionFee(MAX_TX_FEE)
         .setGas(CONTRACT_CALL_GAS)
         .setContractId(parseContractID(contractId))
         .setFunction("startTimer")
         .execute(client);
 
-    TransactionRecord record = transactionId.getRecord(client);
+    TransactionRecord record = getRecord(transactionId, client);
     log.info("startTimer call record = " + record);
 
     ContractFunctionResult contractCallResult = record.getContractExecuteResult();
@@ -397,12 +411,14 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: reset auction]")
+        .setMaxTransactionFee(MAX_TX_FEE)
         .setGas(CONTRACT_CALL_GAS)
         .setContractId(parseContractID(contractId))
         .setFunction("auctionReset")
         .execute(client);
 
-    TransactionRecord record = transactionId.getRecord(client);
+    TransactionRecord record = getRecord(transactionId, client);
     log.info("auctionReset call record = " + record);
 
     ContractFunctionResult contractCallResult = record.getContractExecuteResult();
@@ -414,7 +430,27 @@ public class AuctionService {
     return record;
   }
 
-  /**
+  private TransactionRecord getRecord(TransactionId transactionId, Client client) throws HederaNetworkException, HederaStatusException {
+    TransactionRecord record = null;
+		try {
+	    record = transactionId.getRecord(client);
+		} catch (HederaRecordStatusException e) {
+			record = ((HederaRecordStatusException) e).record;
+		}
+		return record;
+	}
+
+  private TransactionReceipt getReceipt(TransactionId transactionId, Client client) throws HederaNetworkException, HederaStatusException {
+  	TransactionReceipt receipt = null;
+		try {
+	    receipt = transactionId.getReceipt(client);
+		} catch (HederaReceiptStatusException e) {
+			receipt = ((HederaReceiptStatusException) e).receipt;
+		}
+		return receipt;
+	}
+
+	/**
    * Make a contract call to end an auction.
    *
    * @param bidderAddr   the account ID of the form 0.0.x of the calling user
@@ -436,17 +472,21 @@ public class AuctionService {
    * @param managerId  the account ID of the calling user
    * @param contractId the contract ID
    * @return the call transaction record
+   * @throws HederaStatusException 
+   * @throws HederaNetworkException 
    * @throws Exception
    */
-  public TransactionRecord endAuction(AccountId managerId, ContractId contractId) throws Exception {
+  public TransactionRecord endAuction(AccountId managerId, ContractId contractId) throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId transactionId = new ContractExecuteTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: end auction]")
         .setGas(CONTRACT_CALL_GAS)
         .setContractId(contractId)
+        .setMaxTransactionFee(MAX_TX_FEE)
         .setFunction("auctionEnd")
         .execute(client);
 
-    TransactionRecord record = transactionId.getRecord(client);
+    TransactionRecord record = getRecord(transactionId, client);
     log.info("auctionEnd call record = " + record);
 
     ContractFunctionResult contractCallResult = record.getContractExecuteResult();
@@ -586,12 +626,13 @@ public class AuctionService {
       throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId fileTxId = new FileAppendTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: append file]")
         .setFileId(fid)
         .setContents(bytes)
         .setMaxTransactionFee(200000000l)
         .execute(client);
 
-    TransactionReceipt fileReceipt = fileTxId.getReceipt(client);
+    TransactionReceipt fileReceipt = getReceipt(fileTxId, client);
     Status status = fileReceipt.status;
     log.info("append file receipt: " + fileReceipt);
     Assert.isTrue(Status.Success == status, "file append failed!");
@@ -608,13 +649,14 @@ public class AuctionService {
   public FileId createFile(byte[] bytes) throws HederaNetworkException, HederaStatusException {
     Client client = getClient(managerAccountId);
     TransactionId fileTxId = new FileCreateTransaction()
+    		.setTransactionMemo("[Opencrowd auction demo with events: create file]")
         .setExpirationTime(Instant.now().plus(HederaConstants.DEFAULT_AUTORENEW_DURATION))
         // Use the same key as the operator to "own" this file
         .addKey(managerPublicKey)
         .setContents(bytes).setMaxTransactionFee(300000000l)
         .execute(client);
 
-    TransactionReceipt fileReceipt = fileTxId.getReceipt(client);
+    TransactionReceipt fileReceipt = getReceipt(fileTxId, client);
     FileId newFileId = fileReceipt.getFileId();
     log.info("contract bytecode file: " + newFileId);
     Assert.notNull(newFileId, "created file ID is null!");

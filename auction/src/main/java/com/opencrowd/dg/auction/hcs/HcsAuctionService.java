@@ -70,7 +70,8 @@ public class HcsAuctionService {
   public ConsensusTopicId createTopic() throws HederaStatusException {
     Client client = getClient(managerAccountId);
     final TransactionId transactionId = new ConsensusTopicCreateTransaction()
-        .execute(client);
+    		.setTransactionMemo("[Opencrowd auction demo with HCS: create topic]")
+    		.execute(client);
     //Grab the newly generated topic ID
     final ConsensusTopicId topicId = transactionId.getReceipt(client).getConsensusTopicId();
     LOGGER.info("Your topic ID is: " + topicId);
@@ -80,7 +81,7 @@ public class HcsAuctionService {
   public void updateTopic() throws HederaStatusException {
     Client client = getClient(managerAccountId);
     final TransactionId transactionId = new ConsensusTopicUpdateTransaction()
-        .setTopicMemo("calling update")
+    		.setTransactionMemo("[Opencrowd auction demo with HCS: update topic]")
         .execute(client);
     //Grab the newly generated topic ID
     final ConsensusTopicId topicId = transactionId.getReceipt(client).getConsensusTopicId();
@@ -94,6 +95,7 @@ public class HcsAuctionService {
   public String sendMessage(String bidder, ConsensusTopicId topicID, String message) throws HederaStatusException {
     Client client = getClient(parseAccountID(bidder));
     final TransactionId transactionId = new ConsensusMessageSubmitTransaction()
+    		.setTransactionMemo("[OpenCrowd auction demo with HCS: send message]")
         .setTopicId(topicID)
         .setMessage(message)
         .execute(client);
